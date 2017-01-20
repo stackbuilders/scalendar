@@ -1,4 +1,5 @@
 # SCalendar: Haskell Library to deal with resource availability in a Calendar.
+[![CircleCI](https://circleci.com/gh/nebtrx/SCalendar/tree/master.svg?style=svg&circle-token=884fdc7c78c3f4e9241e6c8f962462d48aad81e1)](https://circleci.com/gh/nebtrx/SCalendar/tree/master)
 
 This is a library for handling calendars and resource availability based on the
 "top-nodes" algorithm and set operations. That's why it is called `SCalendar`: Calendars

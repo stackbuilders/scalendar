@@ -1,30 +1,30 @@
 name:                SCalendar
 version:             0.1.0.0
 synopsis:            This is a library for handling calendars and resource availability based on the "top-nodes algorithm" and set operations.
--- description:         
+-- description:
 homepage:            https://bitbucket.org/sebastuztra/destinosrestapi/src
 license:             MIT
 license-file:        LICENSE
 author:              Sebastian Pulido Gomez
 maintainer:          sebastian0092@gmail.com
--- copyright:           
+-- copyright:
 category:            Calendar
 build-type:          Simple
--- extra-source-files:  
+-- extra-source-files:
 cabal-version:       >=1.10
 
 library
   exposed-modules:     SCalendar.Operations,
-                       SCalendar.BreadCrumbs, 
-                       SCalendar.DataTypes, 
+                       SCalendar.BreadCrumbs,
+                       SCalendar.DataTypes,
                        SCalendar.Internal
-                       
-  -- other-modules:       
-  -- other-extensions:    
-  build-depends:  base >= 4.8 && < 4.9,
+
+  -- other-modules:
+  -- other-extensions:
+  build-depends:  base >= 4.8 && < 5,
                   containers,
-                  time, 
+                  time,
                   text >= 1.2.2.1
-                       
-  hs-source-dirs:      libs
+
+  hs-source-dirs:      lib
   default-language:    Haskell2010
