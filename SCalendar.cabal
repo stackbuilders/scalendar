@@ -13,10 +13,10 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:  SCalendar.Operations,
-                    SCalendar.BreadCrumbs,
-                    SCalendar.DataTypes,
-                    SCalendar.Internal
+  exposed-modules:  Time.SCalendar.Operations,
+                    Time.SCalendar.Zippers,
+                    Time.SCalendar.DataTypes,
+                    Time.SCalendar.Internal
   build-depends:  base >= 4.8 && < 5,
                   containers >= 0.5.7.1 && < 0.6,
                   time >= 1.5 && < 2,
