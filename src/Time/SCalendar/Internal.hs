@@ -22,7 +22,7 @@ maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x:xs) = Just x
 
--- << Find the first power of 2 that is equal or greater than n.
+-- << Find the first power of 2 that makes 2^n equal or greater than n.
 powerOfTwo :: Int -> Int
 powerOfTwo n =
   go n 0
@@ -32,7 +32,7 @@ powerOfTwo n =
       | otherwise = go d (i+1)
 
 -- << Given an interval,this function determines if it is included in another interval.
-isIncluded :: (From, To) -> (From, To) -> Bool
+isIncluded :: Ord a => (a, a) -> (a, a) -> Bool
 isIncluded (from, to) (from', to') =
   from' <= from && from <= to' && from' <= to && to <= to' && from <= to
 
