@@ -1,8 +1,9 @@
 module SCalendarTest.Internal where
 
 
-import Time.SCalendar.Internal (powerOfTwo)
-import Time.SCalendar.Internal (isIncluded)
+import Time.SCalendar.Internal ( powerOfTwo
+                               , isIncluded
+                               , calendarSize )
 
 
 alwaysGreateOrEqualThanN :: Int -> Bool

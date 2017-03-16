@@ -3,8 +3,10 @@ module Main where
 
 import Test.Hspec
 import Test.QuickCheck.Property (property)
+import SCalendarTest.Arbitrary
 import SCalendarTest.Internal ( alwaysGreateOrEqualThanN
                               , eqIntervalsIfIncludeEachOther )
+import SCalendarTest.Operations (calendarSizePowerOfTwo)
 
 
 main :: IO ()
@@ -15,3 +17,6 @@ main = hspec $ do
   describe "isIncluded :: Ord a => (a,a) -> (a,a)" $ do
     it "determines if the first interval is included in the second one" $ do
       property eqIntervalsIfIncludeEachOther
+  describe "createCalendar :: createCalendar :: FirstDay -> NumDays -> Maybe Calendar" $ do
+    it "creates a calendar with a number of days 2^(powerOftwo NumDays)" $ do
+      property calendarSizePowerOfTwo
