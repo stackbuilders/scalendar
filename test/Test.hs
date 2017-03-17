@@ -5,7 +5,8 @@ import Test.Hspec
 import Test.QuickCheck.Property (property)
 import SCalendarTest.Arbitrary
 import SCalendarTest.Internal ( alwaysGreateOrEqualThanN
-                              , eqIntervalsIfIncludeEachOther )
+                              , eqIntervalsIfIncludeEachOther
+                              , returnsTargetZipper         )
 import SCalendarTest.Operations (calendarSizePowerOfTwo)
 
 
@@ -20,3 +21,6 @@ main = hspec $ do
   describe "createCalendar :: createCalendar :: FirstDay -> NumDays -> Maybe Calendar" $ do
     it "creates a calendar with a number of days 2^(powerOftwo NumDays)" $ do
       property calendarSizePowerOfTwo
+  describe "goToNode :: (From, To) -> Calendar -> Maybe CalendarZipper" $ do
+    it "goes to the node with interval (From, To) in the calendar" $ do
+      property returnsTargetZipper
