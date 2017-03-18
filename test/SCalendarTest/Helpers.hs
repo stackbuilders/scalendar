@@ -6,5 +6,5 @@ import Data.Time.Calendar (toGregorian)
 
 
 getUTCdayNum (UTCTime day _) =
-  let (_, num, _) = toGregorian day
+  let (_, _, num) = toGregorian day
   in num
