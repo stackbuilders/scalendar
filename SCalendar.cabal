@@ -29,6 +29,7 @@ test-suite scalendar-test
   other-modules:  SCalendarTest.Internal
                 , SCalendarTest.Operations
                 , SCalendarTest.Arbitrary
+                , SCalendarTest.Helpers
   main-is:             Test.hs
   build-depends:       base
                      , SCalendar

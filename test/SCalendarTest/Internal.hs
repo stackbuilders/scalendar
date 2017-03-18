@@ -2,12 +2,13 @@ module SCalendarTest.Internal where
 
 
 import SCalendarTest.Arbitrary (Interval(..))
+import SCalendarTest.Helpers (getUTCdayNum)
 import Data.Time.Clock (UTCTime (..))
 import Time.SCalendar.DataTypes (Calendar(..))
 import Data.Time.Calendar (toGregorian)
 import Time.SCalendar.Internal ( powerOfTwo
                                , isIncluded
-                               , goToNode   )
+                               , goToNode  )
 
 
 alwaysGreateOrEqualThanN :: Int -> Bool
@@ -29,10 +30,6 @@ returnsTargetZipper calendar (Interval from to) =
   in maybe (ifNothing calendar) checkTarget maybeCalendar
   where
     interval = (from, to)
-    -- << >> --
-    getUTCdayNum (UTCTime day _) =
-      let (_, num, _) = toGregorian day
-      in num
     -- << >> --
     checkTarget (TimeUnit unit q qn) = (unit, unit) == interval
     checkTarget (Empty interval') = interval' == interval
