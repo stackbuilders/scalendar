@@ -4,11 +4,11 @@ module SCalendarTest.Internal where
 import Data.List (elem)
 import Data.Maybe (isJust)
 import SCalendarTest.Helpers (getUTCdayNum)
-import Time.SCalendar.DataTypes (Calendar(..))
+import Time.SCalendar.DataTypes (Calendar(..), Reservation(..))
 import Time.SCalendar.Zippers (goUp)
 import SCalendarTest.Arbitrary ( Interval(..)
                                , RandomZippers(..)
-                               , CalendarInterval(..) )
+                               , CalendarReservations(..) )
 import Time.SCalendar.Internal ( powerOfTwo
                                , isIncluded
                                , goToNode
@@ -39,30 +39,36 @@ returnsTargetZipper calendar (Interval from to) =
   in maybe (ifNothing calendar) checkTarget maybeCalendar
   where
     interval = (from, to)
-    -- << >> --
+    -- ^ --
     checkTarget (TimeUnit unit q qn) = (unit, unit) == interval
     checkTarget (Empty interval') = interval' == interval
     checkTarget (Node interval' q qn c1 c2) = interval' == interval
-    -- << >> --
+    -- ^ --
     ifNothing (Node interval' q qn c1 c2) =
       not $ isIncluded interval interval' && (getUTCdayNum from) `mod` 2 == 0
     ifNothing _ = False
 
-isLeftMostTopNode :: Interval -> Calendar -> Bool
-isLeftMostTopNode (Interval from to) calendar = maybe True id $ do
+isLeftMostTopNode :: CalendarReservations -> Bool
+isLeftMostTopNode (CalReservs _ []) = False
+isLeftMostTopNode (CalReservs calendar (reserv:_)) = maybe False id $ do
   (from', to') <- getZipInterval <$> leftMostTopNode (from, to) calendar
   return $ from' == from &&
            if to' == to
            then (from', to') == (from, to)
            else to' < to
+  where
+    (Reservation _ (from, to)) = reserv
 
-isRightMostTopNode :: Interval -> Calendar -> Bool
-isRightMostTopNode (Interval from to) calendar = maybe True id $ do
+isRightMostTopNode :: CalendarReservations -> Bool
+isRightMostTopNode (CalReservs _ []) = False
+isRightMostTopNode (CalReservs calendar (reserv:_)) = maybe False id $ do
   (from', to') <- getZipInterval <$> rightMostTopNode (from, to) calendar
   return $ to' == to &&
            if from' == from
            then (from', to') == (from, to)
            else from' > from
+  where
+    (Reservation _ (from, to)) = reserv
 
 returnsCommonParent :: RandomZippers -> Bool
 returnsCommonParent (RandomZippers zip1 zip2) = maybe False id $ do
@@ -75,39 +81,47 @@ returnsCommonParent (RandomZippers zip1 zip2) = maybe False id $ do
            toP >= to1 &&
            toP >= to2
 
-leftMostAndRightMostInTopMost :: CalendarInterval -> Bool
-leftMostAndRightMostInTopMost (CalInterval calendar (Interval from to)) =
-  maybe False id $ do
-    ltmInterval <- getZipInterval <$> leftMostTopNode (from, to) calendar
-    rtmInterval <- getZipInterval <$> rightMostTopNode (from, to) calendar
-    topMostIntervals <- (fmap . fmap) getZipInterval (topMostNodes (from, to) calendar)
-    return $ (ltmInterval `elem` topMostIntervals) && (rtmInterval `elem` topMostIntervals)
+leftMostAndRightMostInTopMost :: CalendarReservations -> Bool
+leftMostAndRightMostInTopMost (CalReservs _ []) = False
+leftMostAndRightMostInTopMost (CalReservs calendar (reserv:_)) = maybe False id $ do
+  ltmInterval <- getZipInterval <$> leftMostTopNode (from, to) calendar
+  rtmInterval <- getZipInterval <$> rightMostTopNode (from, to) calendar
+  topMostIntervals <- (fmap . fmap) getZipInterval (topMostNodes (from, to) calendar)
+  return $ (ltmInterval `elem` topMostIntervals) && (rtmInterval `elem` topMostIntervals)
+  where
+    (Reservation _ (from, to)) = reserv
 
-outerMostNodesIncludeIntermediate :: CalendarInterval -> Bool
-outerMostNodesIncludeIntermediate (CalInterval calendar (Interval from to)) =
-  maybe False id $ do
-    (from', _) <- getZipInterval <$> leftMostTopNode (from, to) calendar
-    (_, to') <- getZipInterval <$> rightMostTopNode (from, to) calendar
-    topMostIntervals <- (fmap . fmap) getZipInterval (topMostNodes (from, to) calendar)
-    -- Each intermediate interval must be included in the leftmost and rightmost ones
-    return $ all (`isIncluded` (from', to'))  topMostIntervals
+outerMostNodesIncludeIntermediate :: CalendarReservations -> Bool
+outerMostNodesIncludeIntermediate (CalReservs _ []) = False
+outerMostNodesIncludeIntermediate (CalReservs calendar (reserv:_)) = maybe False id $ do
+  (from', _) <- getZipInterval <$> leftMostTopNode (from, to) calendar
+  (_, to') <- getZipInterval <$> rightMostTopNode (from, to) calendar
+  topMostIntervals <- (fmap . fmap) getZipInterval (topMostNodes (from, to) calendar)
+  -- ^ Each intermediate interval must be included in the leftmost and rightmost ones
+  return $ all (`isIncluded` (from', to'))  topMostIntervals
+  where
+    (Reservation _ (from, to)) = reserv
 
-ifOnlyOneTopNodeItEqualsInterval :: CalendarInterval -> Bool
-ifOnlyOneTopNodeItEqualsInterval (CalInterval calendar (Interval from to)) =
-  maybe False id $ do
-    topMostIntervals <- (fmap . fmap) getZipInterval (topMostNodes (from, to) calendar)
-    if length topMostIntervals == 1
-    then return $ (topMostIntervals !! 0) == (from, to)
-    else return True
+ifOnlyOneTopNodeItEqualsInterval :: CalendarReservations -> Bool
+ifOnlyOneTopNodeItEqualsInterval (CalReservs _ []) = False
+ifOnlyOneTopNodeItEqualsInterval (CalReservs calendar (reserv:_)) = maybe False id $ do
+  topMostIntervals <- (fmap . fmap) getZipInterval (topMostNodes (from, to) calendar)
+  if length topMostIntervals == 1
+  then return $ (topMostIntervals !! 0) == (from, to)
+  else return True
+  where
+    (Reservation _ (from, to)) = reserv
 
-parentOfTopNodesNotIncluded :: CalendarInterval -> Bool
-parentOfTopNodesNotIncluded (CalInterval calendar (Interval from to)) =
-  maybe False id $ do
-    (from', _) <- getZipInterval <$> leftMostTopNode (from, to) calendar
-    (_, to') <- getZipInterval <$> rightMostTopNode (from, to) calendar
-    tmNodes <- topMostNodes (from, to) calendar
-    parentIntervals <- (fmap . fmap) getZipInterval
-                                    (sequence $ filter isJust (goUp <$> tmNodes))
-    return $ all (`notIncluded` (from', to')) parentIntervals
+parentOfTopNodesNotIncluded :: CalendarReservations -> Bool
+parentOfTopNodesNotIncluded (CalReservs _ []) = False
+parentOfTopNodesNotIncluded (CalReservs calendar (reserv:_)) = maybe False id $ do
+  (from', _) <- getZipInterval <$> leftMostTopNode (from, to) calendar
+  (_, to') <- getZipInterval <$> rightMostTopNode (from, to) calendar
+  tmNodes <- topMostNodes (from, to) calendar
+  parentIntervals <- (fmap . fmap) getZipInterval
+                                  (sequence $ filter isJust (goUp <$> tmNodes))
+  return $ all (`notIncluded` (from', to')) parentIntervals
   where
     notIncluded i1 i2 = not $ isIncluded i1 i2
+    -- ^ --
+    (Reservation _ (from, to)) = reserv

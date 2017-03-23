@@ -9,20 +9,20 @@ import qualified Data.Set as S (empty, union, unions)
 import qualified Data.Time as TM (diffUTCTime)
 
 
--- << UTILITY FUNCTIONS >> --
+-- | UTILITY FUNCTIONS | --
 
--- << Given a calendar, this function returns the number of days of this calendar.
+-- | Given a calendar, this function returns the number of days of this calendar.
 calendarSize :: Calendar -> Int
 calendarSize (Node (from, to ) _ _ _ _)
   = 1 + round (TM.diffUTCTime to from / 86400)
 calendarSize node = 0
 
--- << Safely return the head of a list.
+-- | Safely return the head of a list.
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x:xs) = Just x
 
--- << Find the first power of 2 that makes 2^n equal or greater than n.
+-- | Find the first power of 2 that makes 2^n equal or greater than n.
 powerOfTwo :: Int -> Int
 powerOfTwo n =
   go n 0
@@ -31,12 +31,12 @@ powerOfTwo n =
       | 2^i >= d = i
       | otherwise = go d (i+1)
 
--- << Given an interval,this function determines if it is included in another interval.
+-- | Given an interval,this function determines if it is included in another interval.
 isIncluded :: Ord a => (a, a) -> (a, a) -> Bool
 isIncluded (from, to) (from', to') =
   from' <= from && from <= to' && from' <= to && to <= to' && from <= to
 
--- << Validation of conditions an interval (from, to) must meet to fit a calendar:
+-- | Validation of conditions an interval (from, to) must meet to fit a calendar:
 --    - From <= To
 --    - A Calendar which is just a TimeUnit is not valid.
 --    - An Empty Leaf of a Calendar is not valid.
@@ -52,29 +52,29 @@ intervalFitsCalendar interval (Node period _  _  _  _)
   | not $ isIncluded interval period = Nothing
   | otherwise = Just ()
 
--- Given a node this function returns the interval that that node represents.
+-- | Given a node this function returns the interval that that node represents.
 getInterval :: Calendar -> (From, To)
 getInterval (TimeUnit unit _ _) = (unit, unit)
 getInterval (Node (from, to) _ _ _ _) = (from, to)
 getInterval (Empty (from, to)) = (from, to)
 
--- Like getInterval, but gets the interval from a zipper.
+-- | Like getInterval, but gets the interval from a zipper.
 getZipInterval :: CalendarZipper -> (From, To)
 getZipInterval (node, _) = getInterval node
 
--- Get the Q set from a node.
+-- | Get the Q set from a node.
 getQ :: CalendarZipper -> Q
 getQ (Empty _, _) = S.empty
 getQ (TimeUnit _ q _, _) = q
 getQ (Node _ q _ _ _, _) = q
 
--- Get the QN set from a node.
+-- | Get the QN set from a node.
 getQN :: CalendarZipper -> QN
 getQN (Empty _, _) = S.empty
 getQN (TimeUnit _ _ qn, _) = qn
 getQN (Node _ _  qn _ _, _) = qn
 
--- << Given a node this function returns the QMax For that node.
+-- |  Given a node this function returns the QMax For that node.
 --    QMax = Q + U(QN of parent nodes up to the root node)
 getQMax :: CalendarZipper -> Maybe (Set  Text)
 getQMax (node, []) = Just $ getQ (node, [])
@@ -90,11 +90,11 @@ getQMax zipper = do
       parent <- goUp zipper
       go parent $ S.union sum  qn
 
--- << UTILITY FUNCTIONS >> --
+-- | UTILITY FUNCTIONS | --
 
 
--- << Given a period of time and a calendar, this function finds the leftMost top-node
---    of that interval. An empty leaf is not considered a top-most node.
+-- | Given a period of time and a calendar, this function finds the leftMost top-node
+--   of that interval. An empty leaf is not considered a top-most node.
 leftMostTopNode :: (From, To)
                 -> Calendar
                 -> Maybe CalendarZipper
@@ -124,8 +124,8 @@ leftMostTopNode interval calendar = do
                      else Just []
           return $ concat [lAnswer, rAnswer]
 
--- << Given a period of time and a calendar, this function finds the rightMost
---    top-node of that interval. An empty leaf is not considered a top-most node.
+-- | Given a period of time and a calendar, this function finds the rightMost
+--   top-node of that interval. An empty leaf is not considered a top-most node.
 rightMostTopNode :: (From, To)
                  -> Calendar
                  -> Maybe CalendarZipper
@@ -155,9 +155,9 @@ rightMostTopNode interval calendar = do
                      else Just []
           return $ concat [lAnswer, rAnswer]
 
--- << Given two nodes this function finds the common parent node of those nodes,
---    if it exists. The result is only valid if the two nodes (and their zippers) come
---    from the same calendar.
+-- | Given two nodes this function finds the common parent node of those nodes,
+--   if it exists. The result is only valid if the two nodes (and their zippers) come
+--   from the same calendar.
 commonParent :: CalendarZipper
              -> CalendarZipper
              -> Maybe CalendarZipper
@@ -184,10 +184,10 @@ commonParent zipper1 zipper2 = do
           zipper1' <- goUp zipper1
           commonParent zipper1' zipper2
 
--- << This function returns the topmost nodes of a period of time in a given calendar. Empty leaves
---    are not consider to be top-most nodes.
---    This function returns at least the rightmost top-node in case it is found but the leftmost-top
---    node is not found.
+-- | This function returns the topmost nodes of a period of time in a given calendar. Empty leaves
+--   are not consider to be top-most nodes.
+--   This function returns at least the rightmost top-node in case it is found but the leftmost-top
+--   node is not found.
 topMostNodes :: (From, To)
              -> Calendar
              -> Maybe [CalendarZipper]
@@ -231,9 +231,9 @@ topMostNodes (lower, upper) calendar = do
           rAnswer <- goDownTree period  leftMost rightMost rChild
           return $ concat [lAnswer, rAnswer]
 
--- << This function receives a Node (point in a Calendar) and returns a new Node
---    (up to the root node) with Q updated. That is, this function updates the Q all
---    over the tree. Q = U(Q(leftChild), Q(rightChild), QN).
+-- | This function receives a Node (point in a Calendar) and returns a new Node
+--   (up to the root node) with Q updated. That is, this function updates the Q all
+--   over the tree. Q = U(Q(leftChild), Q(rightChild), QN).
 updateQ :: CalendarZipper -> Maybe CalendarZipper
 updateQ (node, []) = Just (node, [])
 updateQ zipper = do
@@ -245,8 +245,8 @@ updateQ zipper = do
       rQ = getQ rChild
   updateQ (Node period (S.unions [lQ, rQ, qn]) qn left right, bs)
 
--- << Given a period of time and a Calendar, go to the node that represents
---    that period, if it exists.
+-- | Given a period of time and a Calendar, go to the node that represents
+--   that period, if it exists.
 goToNode :: (From, To) -> Calendar -> Maybe CalendarZipper
 goToNode interval calendar = do
   result <- go interval (calendar, [])
@@ -275,10 +275,10 @@ goToNode interval calendar = do
                        else go (lower,upper) (rChild, bsr)
             return $ concat [lAnswer, rAnswer]
 
--- << This function takes a list of topMostNodes intervals, a set of units to be reserved,
---    a calendar, and a binary operation over sets (union or difference). The binary
---    operation determines the way that each node will be updated: union for
---    reservations and difference for deleting from a previous reservation.
+-- | This function takes a list of topMostNodes intervals, a set of units to be reserved,
+--   a calendar, and a binary operation over sets (union or difference). The binary
+--   operation determines the way that each node will be updated: union for
+--   reservations and difference for deleting from a previous reservation.
 updateCalendar :: [(From, To)]
                -> Set  Text
                -> Calendar
@@ -291,17 +291,17 @@ updateCalendar (period:ps) elts cal f = do
   updateCalendar ps elts updatedRoot f
   where
     update s (Empty period, bs) = do
-      updateQ (Empty period, bs) -- make sure to update Q all over the tree.
+      updateQ (Empty period, bs) -- ^ make sure to update Q all over the tree.
     update s (TimeUnit unit q qn, bs) = do
       newQ <- f q s
       newQN <- f qn s
       let zipper = (TimeUnit unit newQ newQN, bs)
-      updateQ zipper -- make sure to update Q all over the tree.
+      updateQ zipper -- ^ make sure to update Q all over the tree.
     update s (Node period q qn left right, bs) = do
       newQ <- f q s
       newQN <- f qn s
       let zipper = (Node period newQ newQN left right, bs)
-      updateQ zipper -- make sure to update Q all over the tree.
+      updateQ zipper -- ^ make sure to update Q all over the tree.
     updateQandQN :: Set Text
                  -> (From, To)
                  -> Calendar

@@ -37,5 +37,6 @@ test-suite scalendar-test
                      , QuickCheck >= 2.9.2 && < 3.0
                      , time
                      , containers
+                     , text
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010

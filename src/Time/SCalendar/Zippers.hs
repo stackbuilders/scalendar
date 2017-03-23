@@ -8,7 +8,7 @@ import Time.SCalendar.DataTypes ( Calendar(..)
                                 , QN         )
 
 
--- << Zippers to move around the calendar >> --
+-- | Zippers to move around the calendar | --
 
 data Crumb = LeftCrumb (From, To) Q QN Calendar
            | RightCrumb (From, To) Q QN Calendar

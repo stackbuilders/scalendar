@@ -16,7 +16,11 @@ import SCalendarTest.Internal ( alwaysGreateOrEqualThanN
                               , ifOnlyOneTopNodeItEqualsInterval
                               , parentOfTopNodesNotIncluded     )
 import SCalendarTest.Operations ( calendarSizePowerOfTwo
-                                , symmetricalIntervalLength )
+                                , symmetricalIntervalLength
+                                , qMaxOfParentIncludedInChildren
+                                , quantityNotAvailableAfterReservation
+                                , periodNotAvailableAfterReservation
+                                , reservAvailableAfterCancellation  )
 
 
 main :: IO ()
@@ -54,3 +58,17 @@ main = hspec $ do
     context "when there is only one topmost-node" $ do
       it "must return an interval equal to (From, To)" $ do
         property ifOnlyOneTopNodeItEqualsInterval
+  describe "reserveManyPeriods :: [Reservation] -> SCalendar -> Maybe SCalendar" $ do
+    it "returns a Calendar which satisfies that QMax of parent node is included in QMax of left child" $ do
+      property qMaxOfParentIncludedInChildren
+  describe "isQuantityAvailable :: Quantity -> (From, To) -> SCalendar -> Bool" $ do
+    it "determines if a quantity is available after a reservation" $ do
+      property quantityNotAvailableAfterReservation
+  describe "isReservAvailable :: Reservation -> SCalendar -> Bool" $ do
+    context "when a node has already been reserved" $ do
+      it "returns false for the same reservation in that node" $ do
+        property periodNotAvailableAfterReservation
+  describe "cancelManyPeriods :: [Cancellation] -> Calendar -> Maybe Calendar" $ do
+    context "when a reservation in a node is cancelled" $ do
+      it "becomes again availabale" $ do
+        property reservAvailableAfterCancellation
