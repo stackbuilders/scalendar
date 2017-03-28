@@ -15,19 +15,19 @@ type Day = UTCTime
 type Quantity = Int
 type TotalUnits = Set Text
 
--- << Q(Node) = U(Q(LeftChild), Q(RightChild)) U QN(Node)
+-- | Q(Node) = U(Q(LeftChild), Q(RightChild)) U QN(Node)
 type Q = Set Text
 
--- << QN(Node) = reserved elements for all reservations having this node as top-node
+-- | QN(Node) = reserved elements for all reservations having this node as top-node
 type QN = Set Text
 
--- << QMax = Q + U(QN of parent nodes up to the root node)
+-- | QMax = Q + U(QN of parent nodes up to the root node)
 type QMax = Set Text
 
--- << The union of all Qmax's in a list.
+-- | The union of all Qmax's in a list.
 type SQMax = Set Text
 
--- << The difference between TotalUnits and SQMax
+-- | The difference between TotalUnits and SQMax
 type Remaining = Set Text
 
 
@@ -45,6 +45,6 @@ data Calendar = TimeUnit Day Q QN
               | Node (From, To) Q QN Calendar Calendar
               deriving (Eq, Show)
 
--- << An SCalendar is a Set of identifiers togeher with a Calendar
+-- | An SCalendar is a Set of identifiers togeher with a Calendar
 data SCalendar = SCalendar TotalUnits Calendar
                 deriving (Show, Eq)
