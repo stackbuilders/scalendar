@@ -3,6 +3,7 @@ module Time.SCalendar.Internal where
 
 import Data.Set (Set)
 import Data.Text (Text)
+import Data.Maybe (listToMaybe)
 import Time.SCalendar.Zippers
 import Time.SCalendar.DataTypes
 import qualified Data.Set as S (empty, union, unions)
@@ -17,19 +18,11 @@ calendarSize (Node (from, to ) _ _ _ _)
   = 1 + round (TM.diffUTCTime to from / 86400)
 calendarSize node = 0
 
--- | Safely return the head of a list.
-maybeHead :: [a] -> Maybe a
-maybeHead [] = Nothing
-maybeHead (x:xs) = Just x
-
 -- | Find the first power of 2 that makes 2^n equal or greater than n.
 powerOfTwo :: Int -> Int
 powerOfTwo n =
-  go n 0
-  where
-    go d i
-      | 2^i >= d = i
-      | otherwise = go d (i+1)
+  let power = ceiling $ logBase 2 (fromIntegral $ abs n)
+  in if power > 1 then power else 1
 
 -- | Given an interval,this function determines if it is included in another interval.
 isIncluded :: Ord a => (a, a) -> (a, a) -> Bool
@@ -74,8 +67,8 @@ getQN (Empty _, _) = S.empty
 getQN (TimeUnit _ _ qn, _) = qn
 getQN (Node _ _  qn _ _, _) = qn
 
--- |  Given a node this function returns the QMax For that node.
---    QMax = Q + U(QN of parent nodes up to the root node)
+-- | Given a node this function returns the QMax For that node.
+--   QMax = Q + U(QN of parent nodes up to the root node)
 getQMax :: CalendarZipper -> Maybe (Set  Text)
 getQMax (node, []) = Just $ getQ (node, [])
 getQMax zipper = do
@@ -101,7 +94,7 @@ leftMostTopNode :: (From, To)
 leftMostTopNode interval calendar = do
   maybeBarrier <- intervalFitsCalendar interval calendar
   result <- ltmNode interval (calendar, [])
-  maybeHead result
+  listToMaybe result
   where
     ltmNode _ (Empty _, _) = Just []
     ltmNode (lower, upper) (TimeUnit t q qn, bs)
@@ -132,7 +125,7 @@ rightMostTopNode :: (From, To)
 rightMostTopNode interval calendar = do
   maybeBarrier <- intervalFitsCalendar interval calendar
   result <- rtmNode interval (calendar, [])
-  maybeHead result
+  listToMaybe result
   where
     rtmNode _ (Empty _, _) = Just []
     rtmNode (lower, upper) (TimeUnit t q qn, bs)
@@ -250,7 +243,7 @@ updateQ zipper = do
 goToNode :: (From, To) -> Calendar -> Maybe CalendarZipper
 goToNode interval calendar = do
   result <- go interval (calendar, [])
-  maybeHead result
+  listToMaybe result
   where
     go (lower, upper) (Empty (from, to), bs)
       | (lower, upper) == (from, to) = Just [(Empty (from, to), bs)]

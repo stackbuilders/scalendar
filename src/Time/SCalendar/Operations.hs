@@ -64,9 +64,9 @@ augmentCalendar (SCalendar totalUnits calendar) k = do
   (root, []) <- upToRoot updatedCal
   return $ SCalendar totalUnits root
 
--- |  Given an interval, an amount of units to be reserved, the number of
---    available units and a calendar this function determines if that period of time
---    and quantity are available in that calendar.
+-- | Given an interval, an amount of units to be reserved, the number of
+--   available units and a calendar this function determines if that period of time
+--   and quantity are available in that calendar.
 isQuantityAvailable :: Quantity
                     -> (From, To)
                     -> SCalendar
@@ -191,11 +191,11 @@ reservePeriod reservation (SCalendar totalUnits calendar) = do
   updatedCalendar <- reservePeriod_ reservation calendar
   return $ SCalendar totalUnits updatedCalendar
 
--- |  This function is like reservePeriod, but instead of making one reservation at a time,
---    it takes a list of reservations. This function will return a calendar only with the ones
---    that pass the isReservAvailable test. Take into account that reservations will be inserted
---    in the tree in the order they are in the input list. So, if a reservation conflicts with the
---    ones that have been alredy inserted, it will not be included in the tree.
+-- | This function is like reservePeriod, but instead of making one reservation at a time,
+--   it takes a list of reservations. This function will return a calendar only with the ones
+--   that pass the isReservAvailable test. Take into account that reservations will be inserted
+--   in the tree in the order they are in the input list. So, if a reservation conflicts with the
+--   ones that have been alredy inserted, it will not be included in the tree.
 reserveManyPeriods :: [Reservation]
                    -> SCalendar
                    -> Maybe SCalendar
@@ -248,8 +248,8 @@ cancelManyPeriods (cancellation:cs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = cancelPeriod canc cal
 
--- |  Given a period of time and a Calendar, this function returns a Report which
---    summarizes important data about that period of time.
+-- | Given a period of time and a Calendar, this function returns a Report which
+--   summarizes important data about that period of time.
 periodReport :: (From, To) -> SCalendar -> Maybe Report
 periodReport period (SCalendar totalUnits calendar) = do
   maybeBarrier <- intervalFitsCalendar period calendar
