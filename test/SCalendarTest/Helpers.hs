@@ -1,12 +1,14 @@
-module SCalendarTest.Helpers ( getUTCdayNum, testIdentifiers  ) where
+module SCalendarTest.Helpers
+  ( getUTCdayNum
+  , testIdentifiers
+  , startDay
+  ) where
 
 
-import Test.QuickCheck.Arbitrary
-import Test.QuickCheck.Gen (Gen)
 import Data.Time.Clock (UTCTime (..))
 import Data.Time.Calendar (toGregorian)
 import Data.Text (Text)
-import qualified Data.Text as T (Text, pack)
+import qualified Data.Text as T (pack)
 
 
 testIdentifiers :: [Text]
@@ -16,3 +18,6 @@ getUTCdayNum :: UTCTime -> Int
 getUTCdayNum (UTCTime day _) =
   let (_, _, num) = toGregorian day
   in num
+
+startDay :: (Integer, Int, Int)
+startDay = (1970, 1, 1)

@@ -15,7 +15,7 @@ library
   hs-source-dirs:   src
   exposed-modules:   Time.SCalendar.Operations
                    , Time.SCalendar.Zippers
-                   , Time.SCalendar.DataTypes
+                   , Time.SCalendar.Types
                    , Time.SCalendar.Internal
   build-depends:    base >= 4.8 && < 5
                   , containers >= 0.5.7.1 && < 0.6
@@ -30,6 +30,7 @@ test-suite scalendar-test
                 , SCalendarTest.Operations
                 , SCalendarTest.Arbitrary
                 , SCalendarTest.Helpers
+                , SCalendarTest.Constructors
   main-is:             Test.hs
   build-depends:       base
                      , SCalendar

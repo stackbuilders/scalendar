@@ -2,30 +2,32 @@ module SCalendarTest.Arbitrary where
 
 
 import Test.QuickCheck.Arbitrary
-import SCalendarTest.Helpers (testIdentifiers)
-import Control.Monad (replicateM)
-import Time.SCalendar.Operations (createCalendar)
-import Data.Time.Calendar (fromGregorian)
-import Data.Time.Clock (UTCTime(..))
+import SCalendarTest.Helpers (testIdentifiers, startDay)
+import Control.Monad (replicateM, guard)
 import Data.Set (Set)
+import Data.Maybe (fromMaybe, fromJust)
 import Data.Text (Text)
-import qualified Data.Text as T (Text, pack)
-import qualified Data.Set as S (Set, empty, fromList, toList)
-import Time.SCalendar.DataTypes (Calendar(..), Reservation (..))
-import Time.SCalendar.Zippers ( CalendarZipper(..)
+import qualified Data.Set as S (fromList)
+import Time.SCalendar.Types ( Calendar(..)
+                            , Reservation
+                            , TimePeriod
+                            , createCalendar
+                            , makeTimePeriod
+                            , makeReservation
+                            , getFrom
+                            , getTo          )
+import Time.SCalendar.Zippers ( CalendarZipper
                               , goRight
                               , goLeft           )
 import Time.SCalendar.Internal ( getZipInterval
                                , getInterval
-                               , calendarSize
+                               , daysBetween
                                , intervalFitsCalendar  )
-import Test.QuickCheck.Gen (Gen, choose, sized, vectorOf)
+import Test.QuickCheck.Gen (choose, sized, vectorOf)
 
 
 -- | Convinient type for Intervals which fit a Calendar
 data CalendarReservations = CalReservs Calendar [Reservation]
-
-data Interval = Interval UTCTime UTCTime
 
 newtype Identifier = Identifier Text
   deriving (Eq, Ord)
@@ -35,29 +37,20 @@ newtype Identifiers = Identifiers (Set Identifier)
 data RandomZippers = RandomZippers CalendarZipper CalendarZipper
 
 
--- | Random calendars will start from 1970/1/1
-startDay = UTCTime (fromGregorian 1970 1 1) 0
-
-
 -- | Arbitrary-size calendars
 instance Arbitrary Calendar where
   arbitrary = do
+    let (year, month, day) = startDay
     -- ^ Random size calendars up to 512 days
     --   and starting from 1970
     size <- choose (2, 9)
-    maybe (return $ TimeUnit startDay S.empty S.empty) return (createCalendar startDay size)
-
+    return $ fromJust $ createCalendar year month day size
 
 -- | Arbitrary instance for time Intervals
-instance Arbitrary Interval where
+instance Arbitrary TimePeriod where
   arbitrary = do
-    month <- choose (1, 12)
-    day <- choose (1, 27)
-    let to = UTCTime (fromGregorian 1970 month day) 0
-    return $ Interval startDay to
-
-instance Show Interval where
-  show (Interval from to) = show (from, to)
+    numDays <- choose (1, 27)
+    return $ fromJust $ makeTimePeriod 1970 1 1 numDays
 -- | --
 
 
@@ -80,22 +73,22 @@ instance Arbitrary CalendarReservations where
     reservs <- replicateM n $ getSuitableInterval calendar
     return $ CalReservs calendar reservs
     where
-      buildReserv from to = sized $ \n -> do
-        k <- choose (1, n)
+      buildReserv interval = sized $ \n -> do
+        k <- choose (1, abs $ n + 1)
         identifiers <- vectorOf k arbitrary
-        return $ Reservation (S.fromList $ (\(Identifier t) -> t) <$> identifiers) (from, to)
+        return $ fromJust $ makeReservation interval (S.fromList $ (\(Identifier t) -> t) <$> identifiers)
       -- ^ --
       getSuitableInterval cal = do
-        interval@(Interval from to) <- arbitrary
+        interval <- arbitrary
         maybe (getSuitableInterval cal)
-              (const $ buildReserv from to)
-              (intervalFitsCalendar (from, to) cal)
+              (const $ buildReserv interval)
+              (guard $ intervalFitsCalendar interval cal)
 
 instance Show CalendarReservations where
   show (CalReservs calendar reservs) =
-    "Calendar root: " ++ (show $ getInterval calendar) ++
+    "Calendar root: " ++ show (getInterval calendar) ++
     " , " ++
-    "Reservations: " ++ (show reservs)
+    "Reservations: " ++ show reservs
 -- | --
 
 
@@ -111,11 +104,12 @@ instance Arbitrary RandomZippers where
           zip1 <- goDown (Just root) zip1Depth
           zip2 <- goDown (Just root) zip2Depth
           return $ RandomZippers zip1 zip2
-    return $ maybe (RandomZippers root root) id maybeZippers
+    return $ fromMaybe (RandomZippers root root) maybeZippers
     where
       getDepth :: Calendar -> Int
       getDepth cal = round $
-        logBase 2 (fromIntegral $ calendarSize cal)
+        let interval = getInterval cal
+        in logBase 2 (fromIntegral $ daysBetween (getFrom interval) (getTo interval))
       -- ^ --
       pickBranch zipper n
         | n `mod` 2 == 0 = goRight zipper
@@ -127,4 +121,3 @@ instance Arbitrary RandomZippers where
 
 instance Show RandomZippers where
   show (RandomZippers zip1 zip2) = show (getZipInterval zip1, getZipInterval zip2)
--- | --
