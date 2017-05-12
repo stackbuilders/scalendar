@@ -1,241 +1,210 @@
-module Time.SCalendar.Internal where
+module Time.SCalendar.Internal
+  ( getInterval
+  , daysBetween
+  , goToNode
+  , updateQ
+  , intervalFitsCalendar
+  , checkQuantAvailability
+  , checkReservAvailability
+  , updateCalendar
+  , topMostNodes
+  , leftMostTopNode
+  , rightMostTopNode
+  , commonParent
+  , getZipInterval
+  , getQMax
+  ) where
 
 
-import Data.Set (Set)
 import Data.Text (Text)
+import Data.Time (UTCTime)
+import Data.Set (Set, union, unions, size, difference, isSubsetOf)
+import Data.Maybe (listToMaybe, maybe)
+import Control.Monad (guard)
 import Time.SCalendar.Zippers
-import Time.SCalendar.DataTypes
-import qualified Data.Set as S (empty, union, unions)
+import Time.SCalendar.Types
 import qualified Data.Time as TM (diffUTCTime)
 
 
 -- | UTILITY FUNCTIONS | --
 
--- | Given a calendar, this function returns the number of days of this calendar.
-calendarSize :: Calendar -> Int
-calendarSize (Node (from, to ) _ _ _ _)
-  = 1 + round (TM.diffUTCTime to from / 86400)
-calendarSize node = 0
+-- | Given two dates, determine the number of days, inclusively, between them.
+daysBetween :: UTCTime -> UTCTime -> Int
+daysBetween from to = 1 + round (TM.diffUTCTime to from / oneDay)
 
--- | Safely return the head of a list.
-maybeHead :: [a] -> Maybe a
-maybeHead [] = Nothing
-maybeHead (x:xs) = Just x
-
--- | Find the first power of 2 that makes 2^n equal or greater than n.
-powerOfTwo :: Int -> Int
-powerOfTwo n =
-  go n 0
-  where
-    go d i
-      | 2^i >= d = i
-      | otherwise = go d (i+1)
-
--- | Given an interval,this function determines if it is included in another interval.
-isIncluded :: Ord a => (a, a) -> (a, a) -> Bool
-isIncluded (from, to) (from', to') =
-  from' <= from && from <= to' && from' <= to && to <= to' && from <= to
-
--- | Validation of conditions an interval (from, to) must meet to fit a calendar:
---    - From <= To
---    - A Calendar which is just a TimeUnit is not valid.
---    - An Empty Leaf of a Calendar is not valid.
---    - The interval must be included in the period of the root node of a calendar.
-intervalFitsCalendar :: (From, To)
-                     -> Calendar
-                     -> Maybe ()
-intervalFitsCalendar (from, to) _
-  | not (from <= to)  = Nothing
-intervalFitsCalendar _ (TimeUnit _ _ _) = Nothing
-intervalFitsCalendar _ (Empty _) = Nothing
-intervalFitsCalendar interval (Node period _  _  _  _)
-  | not $ isIncluded interval period = Nothing
-  | otherwise = Just ()
+-- | A TimePeriod fits a Calendar if it is included in the TimePeriod of the root node of
+--   that Calendar and that Calendar is not a Unit.
+intervalFitsCalendar :: TimePeriod -> Calendar -> Bool
+intervalFitsCalendar interval1 (Node interval2 _  _  _  _) =
+  isIncluded (toTimeUnit interval1) (toTimeUnit interval2)
+intervalFitsCalendar _ _ = False
 
 -- | Given a node this function returns the interval that that node represents.
-getInterval :: Calendar -> (From, To)
-getInterval (TimeUnit unit _ _) = (unit, unit)
-getInterval (Node (from, to) _ _ _ _) = (from, to)
-getInterval (Empty (from, to)) = (from, to)
+getInterval :: Calendar -> TimePeriod
+getInterval (Unit unit _ _) = unit
+getInterval (Node interval _ _ _ _) = toTimeUnit interval
 
 -- | Like getInterval, but gets the interval from a zipper.
-getZipInterval :: CalendarZipper -> (From, To)
-getZipInterval (node, _) = getInterval node
+getZipInterval :: CalendarZipper -> TimePeriod
+getZipInterval (node, _) = (toTimeUnit . getInterval) node
 
 -- | Get the Q set from a node.
-getQ :: CalendarZipper -> Q
-getQ (Empty _, _) = S.empty
-getQ (TimeUnit _ q _, _) = q
+getQ :: CalendarZipper -> Set Text
+getQ (Unit _ q _, _) = q
 getQ (Node _ q _ _ _, _) = q
 
 -- | Get the QN set from a node.
-getQN :: CalendarZipper -> QN
-getQN (Empty _, _) = S.empty
-getQN (TimeUnit _ _ qn, _) = qn
+getQN :: CalendarZipper -> Set Text
+getQN (Unit _ _ qn, _) = qn
 getQN (Node _ _  qn _ _, _) = qn
 
--- |  Given a node this function returns the QMax For that node.
---    QMax = Q + U(QN of parent nodes up to the root node)
-getQMax :: CalendarZipper -> Maybe (Set  Text)
-getQMax (node, []) = Just $ getQ (node, [])
+-- | Given a node this function returns the QMax For that node.
+--   QMax = Q + U(QN of parent nodes up to the root node)
+getQMax :: CalendarZipper -> Maybe (Set Text)
+getQMax zipper@(_, []) = Just $ getQ zipper
 getQMax zipper = do
   parent <- goUp zipper
   go parent (getQ zipper)
   where
-    go (node, []) sum = do
-      let qn = getQN (node, [])
-      return $ S.union sum  qn
+    go zipper@(_, []) sum = do
+      let qn = getQN zipper
+      return $ union sum  qn
     go zipper sum = do
       let qn = getQN zipper
       parent <- goUp zipper
-      go parent $ S.union sum  qn
-
+      go parent $ union sum  qn
 -- | UTILITY FUNCTIONS | --
 
 
 -- | Given a period of time and a calendar, this function finds the leftMost top-node
---   of that interval. An empty leaf is not considered a top-most node.
-leftMostTopNode :: (From, To)
+--   of that interval.
+leftMostTopNode :: TimePeriod
                 -> Calendar
                 -> Maybe CalendarZipper
 leftMostTopNode interval calendar = do
-  maybeBarrier <- intervalFitsCalendar interval calendar
-  result <- ltmNode interval (calendar, [])
-  maybeHead result
+  guard $ intervalFitsCalendar interval calendar
+  result <- ltmNode (getFrom interval, getTo interval) (toZipper calendar)
+  listToMaybe result
   where
-    ltmNode _ (Empty _, _) = Just []
-    ltmNode (lower, upper) (TimeUnit t q qn, bs)
-      | lower == t && t <= upper = Just [(TimeUnit t q qn, bs)]
+    ltmNode (lower, upper) zipper@(Unit t _ _, _)
+      | lower == getFrom t && getFrom t <= upper = Just [zipper]
       | otherwise = Just []
-    ltmNode (lower,upper) node = do
+    ltmNode i@(lower, upper) node@(Node t _ _ _ _, _) = do
+      let (from, to) = (getFrom t, getTo t)
       (lChild, bsl) <- goLeft node
       (rChild, bsr) <- goRight node
-      let (Node (from, to) q qn left right, bs) = node
-      case lower == from && to <= upper of
-        True -> Just [node]
-        False -> do
-          let (fromL, toL) = getInterval lChild
-              (fromR, toR) = getInterval rChild
-          lAnswer <- if lower <= toL
-                     then ltmNode (lower,upper) (lChild, bsl)
-                     else Just []
-          rAnswer <- if lower >= fromR
-                     then ltmNode (lower,upper) (rChild, bsr)
-                     else Just []
-          return $ concat [lAnswer, rAnswer]
+      if lower == from && to <= upper
+        then Just [node]
+        else do
+          let toL = (getTo . getInterval) lChild
+              fromR = (getFrom . getInterval) rChild
+          lAnswer <-
+            if lower <= toL
+              then ltmNode i (lChild, bsl)
+              else Just []
+          rAnswer <-
+            if lower >= fromR
+              then ltmNode i (rChild, bsr)
+              else Just []
+          return $ lAnswer ++ rAnswer
 
 -- | Given a period of time and a calendar, this function finds the rightMost
---   top-node of that interval. An empty leaf is not considered a top-most node.
-rightMostTopNode :: (From, To)
+--   top-node of that interval.
+rightMostTopNode :: TimePeriod
                  -> Calendar
                  -> Maybe CalendarZipper
 rightMostTopNode interval calendar = do
-  maybeBarrier <- intervalFitsCalendar interval calendar
-  result <- rtmNode interval (calendar, [])
-  maybeHead result
+  guard $ intervalFitsCalendar interval calendar
+  result <- rtmNode (getFrom interval, getTo interval) (toZipper calendar)
+  listToMaybe result
   where
-    rtmNode _ (Empty _, _) = Just []
-    rtmNode (lower, upper) (TimeUnit t q qn, bs)
-      | upper == t && t >= lower = Just [(TimeUnit t q qn, bs)]
+    rtmNode (lower, upper) zipper@(Unit t _ _, _)
+      | upper == getFrom t && getFrom t >= lower = Just [zipper]
       | otherwise = Just []
-    rtmNode (lower,upper) node = do
+    rtmNode i@(lower, upper) node@(Node t _ _ _ _, _) = do
+      let (from, to) = (getFrom t, getTo t)
       (lChild, bsl) <- goLeft node
       (rChild, bsr) <- goRight node
-      let (Node (from, to) q qn left right, bs) = node
-      case upper == to && from >= lower of
-        True -> Just [node]
-        False -> do
-          let (fromL, toL) = getInterval lChild
-              (fromR, toR) = getInterval rChild
-          lAnswer <- if upper <= toL
-                     then rtmNode (lower,upper) (lChild, bsl)
-                     else Just []
-          rAnswer <- if upper >= fromR
-                     then rtmNode (lower,upper) (rChild, bsr)
-                     else Just []
-          return $ concat [lAnswer, rAnswer]
+      if upper == to && from >= lower
+        then Just [node]
+        else do
+          let toL = (getTo . getInterval) lChild
+              fromR = (getFrom . getInterval) rChild
+          lAnswer <-
+            if upper <= toL
+              then rtmNode i (lChild, bsl)
+              else Just []
+          rAnswer <-
+            if upper >= fromR
+              then rtmNode i (rChild, bsr)
+              else Just []
+          return $ lAnswer ++ rAnswer
 
 -- | Given two nodes this function finds the common parent node of those nodes,
 --   if it exists. The result is only valid if the two nodes (and their zippers) come
 --   from the same calendar.
-commonParent :: CalendarZipper
-             -> CalendarZipper
-             -> Maybe CalendarZipper
-commonParent zipper1 zipper2 = do
-  let (node1, bs1) = zipper1
-      (node2, bs2) = zipper2
-      bs1Length = length bs1
+commonParent :: CalendarZipper -> CalendarZipper -> Maybe CalendarZipper
+commonParent zipper1@(node1, bs1) zipper2@(node2, bs2) = do
+  let bs1Length = length bs1
       bs2Length = length bs2
-  let interval1 = getInterval node1
+      interval1 = getInterval node1
       interval2 = getInterval node2
-  case bs1Length == bs2Length of
-    True -> if interval1 == interval2
-            then Just zipper1
-            else do
-              zipper1' <- goUp zipper1
-              zipper2' <- goUp zipper2
-              commonParent zipper1' zipper2'
-    False ->
-      case bs1Length < bs2Length of
-        True -> do
-          zipper2' <- goUp zipper2
-          commonParent zipper1 zipper2'
-        False -> do
+  case bs1Length `compare` bs2Length of
+    LT -> do
+      zipper2' <- goUp zipper2
+      commonParent zipper1 zipper2'
+    EQ ->
+      if interval1 == interval2
+        then Just zipper1
+        else do
           zipper1' <- goUp zipper1
-          commonParent zipper1' zipper2
+          zipper2' <- goUp zipper2
+          commonParent zipper1' zipper2'
+    GT -> do
+      zipper1' <- goUp zipper1
+      commonParent zipper1' zipper2
 
--- | This function returns the topmost nodes of a period of time in a given calendar. Empty leaves
---   are not consider to be top-most nodes.
+-- | This function returns the topmost nodes of a period of time in a given calendar.
 --   This function returns at least the rightmost top-node in case it is found but the leftmost-top
 --   node is not found.
-topMostNodes :: (From, To)
+topMostNodes :: TimePeriod
              -> Calendar
              -> Maybe [CalendarZipper]
-topMostNodes (lower, upper) calendar = do
-  rtNode <- rightMostTopNode (lower, upper) calendar
-  let (fromR, toR) = getZipInterval rtNode
-  case (fromR, toR) == (lower, upper) of
-    True -> Just [rtNode]
-    False -> do
-      let leftMost = leftMostTopNode (lower, upper) calendar
-      case leftMost of
-        Nothing -> return [rtNode]
-        Just ltNode -> do
-          let (fromL, toL) = getZipInterval ltNode
-          parent <- commonParent ltNode rtNode
-          answer <- goDownTree (lower, upper) (fromL, toL) (fromR, toR) parent
-          let tmNodes =  ltNode : rtNode : answer
-          return tmNodes
+topMostNodes interval calendar = do
+  rtNode <- rightMostTopNode (toTimeUnit interval) calendar
+  let intervalR = getZipInterval rtNode
+  if intervalR == interval
+  then return [rtNode]
+  else do
+    ltNode <- leftMostTopNode interval calendar
+    let intervalL = getZipInterval ltNode
+    parent <- commonParent ltNode rtNode
+    answer <- goDownTree (toTimeUnit interval) intervalL intervalR parent
+    return $ ltNode : rtNode : answer
   where
-    goDownTree :: (From, To)
-               -> (From, To)
-               -> (From, To)
-               -> CalendarZipper -> Maybe [CalendarZipper]
-    goDownTree _ _ _ (Empty _, _) = Just []
-    goDownTree period leftMost rightMost (TimeUnit t q qn, bs) =
-      case isIncluded (t,t) period of
-        True -> if (t, t) == rightMost || (t, t) == leftMost
-                then Just []
-                else Just [(TimeUnit t q qn, bs)]
-        False -> Just []
-    goDownTree period leftMost rightMost node = do
-      let (Node (from, to) _ _ _ _, bs) = node
-      case isIncluded (from, to) period of
-        True -> if (from, to) == rightMost || (from, to) == leftMost
-                then Just []
-                else Just [node]
-        False -> do
-          lChild <- goLeft node
-          rChild <- goRight node
-          lAnswer <- goDownTree period  leftMost rightMost lChild
-          rAnswer <- goDownTree period  leftMost rightMost rChild
-          return $ concat [lAnswer, rAnswer]
+    goDownTree period leftMost rightMost zipper@(Unit t _ _, _) =
+      if isIncluded t period
+      then if t == rightMost || t == leftMost
+           then Just []
+           else Just [zipper]
+      else Just []
+    goDownTree period leftMost rightMost node@(Node t _ _ _ _, _) =
+      if isIncluded t period
+      then if t == rightMost || t == leftMost
+           then Just []
+           else Just [node]
+      else do
+        lChild <- goLeft node
+        rChild <- goRight node
+        lAnswer <- goDownTree period  leftMost rightMost lChild
+        rAnswer <- goDownTree period  leftMost rightMost rChild
+        return $ lAnswer ++ rAnswer
 
 -- | This function receives a Node (point in a Calendar) and returns a new Node
 --   (up to the root node) with Q updated. That is, this function updates the Q all
 --   over the tree. Q = U(Q(leftChild), Q(rightChild), QN).
 updateQ :: CalendarZipper -> Maybe CalendarZipper
-updateQ (node, []) = Just (node, [])
+updateQ zipper@(node, []) = Just zipper
 updateQ zipper = do
   parent <- goUp zipper
   lChild <- goLeft parent
@@ -243,71 +212,135 @@ updateQ zipper = do
   let (Node period q qn left right, bs) = parent
       lQ = getQ lChild
       rQ = getQ rChild
-  updateQ (Node period (S.unions [lQ, rQ, qn]) qn left right, bs)
+  updateQ (Node period (unions [lQ, rQ, qn]) qn left right, bs)
 
 -- | Given a period of time and a Calendar, go to the node that represents
 --   that period, if it exists.
-goToNode :: (From, To) -> Calendar -> Maybe CalendarZipper
+goToNode :: TimePeriod -> Calendar -> Maybe CalendarZipper
 goToNode interval calendar = do
-  result <- go interval (calendar, [])
-  maybeHead result
+  result <- go (toTimeUnit interval) (toZipper calendar)
+  listToMaybe result
   where
-    go (lower, upper) (Empty (from, to), bs)
-      | (lower, upper) == (from, to) = Just [(Empty (from, to), bs)]
+    go interval zipper@(Unit t _ _, _)
+      | interval == t = Just [zipper]
       | otherwise = Just []
-    go (lower, upper) (TimeUnit t q qn, bs)
-      | (lower, upper) == (t,t) = Just [(TimeUnit t q qn, bs)]
-      | otherwise = Just []
-    go (lower, upper) node = do
-      let (Node (from, to) _ _ _ _, bs) = node
-      case (lower, upper) == (from, to) of
-        True -> Just [node]
-        False -> do
-            (lChild, bsl) <- goLeft node
-            (rChild, bsr) <- goRight node
-            let (fromL, toL) = getInterval lChild
-                (fromR, toR) = getInterval rChild
-            lAnswer <- if lower >= fromR
-                       then Just []
-                       else go (lower,upper) (lChild, bsl)
-            rAnswer <- if upper <=  toL
-                       then Just []
-                       else go (lower,upper) (rChild, bsr)
-            return $ concat [lAnswer, rAnswer]
+    go interval node@(Node t _ _ _ _, bs) =
+      if interval == t
+      then Just [node]
+      else do
+        (lChild, bsl) <- goLeft node
+        (rChild, bsr) <- goRight node
+        let (lower, upper) = (getFrom interval, getTo interval)
+            toL = (getTo . getInterval) lChild
+            fromR = (getFrom . getInterval) rChild
+        lAnswer <- if lower >= fromR
+                   then Just []
+                   else go interval (lChild, bsl)
+        rAnswer <- if upper <=  toL
+                   then Just []
+                   else go interval (rChild, bsr)
+        return $ lAnswer ++ rAnswer
 
 -- | This function takes a list of topMostNodes intervals, a set of units to be reserved,
 --   a calendar, and a binary operation over sets (union or difference). The binary
 --   operation determines the way that each node will be updated: union for
 --   reservations and difference for deleting from a previous reservation.
-updateCalendar :: [(From, To)]
+updateCalendar :: [TimePeriod]
                -> Set  Text
                -> Calendar
                -> (Set Text -> Set Text -> Maybe (Set  Text))
                -> Maybe Calendar
-updateCalendar _ _ (Empty _) _ = Nothing
 updateCalendar [] _ cal _ = Just cal
-updateCalendar (period:ps) elts cal f = do
-  updatedRoot <- updateQandQN elts period cal
-  updateCalendar ps elts updatedRoot f
+updateCalendar (interval:ins) elts cal f = do
+  updatedRoot <- updateQandQN elts (toTimeUnit interval) cal
+  updateCalendar ins elts updatedRoot f
   where
-    update s (Empty period, bs) = do
-      updateQ (Empty period, bs) -- ^ make sure to update Q all over the tree.
-    update s (TimeUnit unit q qn, bs) = do
+    update s (Unit unit q qn, bs) = do
       newQ <- f q s
       newQN <- f qn s
-      let zipper = (TimeUnit unit newQ newQN, bs)
+      let zipper = (Unit unit newQ newQN, bs)
       updateQ zipper -- ^ make sure to update Q all over the tree.
-    update s (Node period q qn left right, bs) = do
+    update s (Node interval q qn left right, bs) = do
       newQ <- f q s
       newQN <- f qn s
-      let zipper = (Node period newQ newQN left right, bs)
+      let zipper = (Node interval newQ newQN left right, bs)
       updateQ zipper -- ^ make sure to update Q all over the tree.
-    updateQandQN :: Set Text
-                 -> (From, To)
-                 -> Calendar
-                 -> Maybe Calendar
-    updateQandQN set (from, to) cal = do
-      zipper <- goToNode (from, to) cal
+    -- ^ --
+    updateQandQN set interval cal = do
+      zipper <- goToNode interval cal
       updatedZip <- update set zipper
       (root, _) <- upToRoot updatedZip
       return root
+
+-- | Algorithm to check availability in a calendar for a given Quantity.
+checkQuantAvailability :: TimePeriod
+                       -> Int
+                       -> Set Text
+                       -> CalendarZipper
+                       -> Bool
+checkQuantAvailability interval qt units zipper =
+  maybe False (not . null) $ checkAvailability interval qt units zipper
+  where
+    checkAvailability _ qt units zipper@(Unit {}, _) = do
+      qMax <- getQMax zipper
+      let avUnits = size (difference units qMax)
+      if qt <= avUnits
+        then Just [()]
+        else Nothing
+    checkAvailability interval qt units node@(Node t _ _ _ _, _) = do
+      qMax <- getQMax node
+      let avUnits = size (difference units qMax)
+      -- ^ Propagate a Nothing if conditions are not met
+      guard $ qt <= avUnits || not (isIncluded t interval)
+      (lChild, bsl) <- goLeft node
+      (rChild, bsr) <- goRight node
+      let (lower, upper) = (getFrom interval, getTo interval)
+          toL = (getTo . getInterval) lChild
+          fromR = (getFrom . getInterval) rChild
+      lAnswer <-
+        if lower >= fromR
+          then Just []
+          else checkAvailability interval qt units (lChild, bsl)
+      rAnswer <-
+        if upper <= toL
+          then Just []
+          else checkAvailability interval qt units (rChild, bsr)
+      return $ lAnswer ++ rAnswer
+
+-- | Algorithm to check availability in a calendar for a given Reservation.
+checkReservAvailability :: Reservation
+                        -> Set Text
+                        -> CalendarZipper
+                        -> Bool
+checkReservAvailability reservation units zipper =
+  maybe False (not . null) $ checkAvailability reservation units zipper
+  where
+    checkAvailability reservation units zipper@(Unit {}, _) = do
+      qMax <- getQMax zipper
+      let avUnits = difference units qMax
+          isSubset = isSubsetOf (reservUnits reservation) avUnits
+      if isSubset
+        then Just [()]
+        else Nothing
+    checkAvailability reservation units node@(Node t _ _ _ _, _) = do
+      qMax <- getQMax node
+      let interval = (toTimeUnit . reservPeriod) reservation
+          avUnits = difference units qMax
+          isSubset = isSubsetOf (reservUnits reservation) avUnits
+      -- ^ If rUnits is not a subset of avUnits and (from, to) is included in (lower, upper),
+      --   then there's no availability. Thus propagate a Nothing
+      guard $ isSubset || not (isIncluded t interval)
+      (lChild, bsl) <- goLeft node
+      (rChild, bsr) <- goRight node
+      let (lower, upper) = (getFrom interval, getTo interval)
+          toL = (getTo . getInterval) lChild
+          fromR = (getFrom . getInterval) rChild
+      lAnswer <-
+        if lower >= fromR
+          then Just []
+          else checkAvailability reservation units (lChild, bsl)
+      rAnswer <-
+        if upper <= toL
+          then Just []
+          else checkAvailability reservation units (rChild, bsr)
+      return $ lAnswer ++ rAnswer

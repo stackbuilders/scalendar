@@ -1,67 +1,51 @@
 module SCalendarTest.Operations where
 
 
-import Time.SCalendar.Operations ( createCalendar
-                                 , reserveManyPeriods
-                                 , reservePeriod_
+import Time.SCalendar.Operations ( reserveManyPeriods
+                                 , reservePeriod'
                                  , cancelManyPeriods
-                                 , isQuantityAvailable
-                                 , isReservAvailable )
-import SCalendarTest.Helpers ( getUTCdayNum
-                             , testIdentifiers )
-import Data.Maybe (isJust)
-import Time.SCalendar.Internal ( calendarSize
-                               , goToNode
-                               , powerOfTwo
+                                 , isQuantityAvailable,
+                                   isReservAvailable  )
+import SCalendarTest.Helpers (getUTCdayNum, testIdentifiers)
+import SCalendarTest.Arbitrary (CalendarReservations(..))
+import Data.Maybe (isJust, fromMaybe)
+import Time.SCalendar.Internal ( goToNode
                                , getQMax
                                , getZipInterval )
-import SCalendarTest.Arbitrary (CalendarReservations(..))
 import Time.SCalendar.Zippers (goLeft, goRight, goUp)
-import Data.Time.Calendar (fromGregorian, toGregorian)
-import Data.Time.Clock (UTCTime(..))
-import Time.SCalendar.DataTypes ( Calendar(..)
-                                , SCalendar(..)
-                                , Reservation(..)
-                                , Cancellation(..) )
-import qualified Data.Set as S (empty, isSubsetOf, fromList, size)
+import Time.SCalendar.Types ( Calendar(..)
+                            , SCalendar(..)
+                            , Reservation(..)
+                            , getFrom
+                            , getTo
+                            , makeCancellation )
+import qualified Data.Set as S (isSubsetOf, fromList, size)
 
-
-calendarSizePowerOfTwo :: Int -> Bool
-calendarSizePowerOfTwo n =
-  let size = if n > 1 then n else (abs n) + 2
-      startDay = UTCTime (fromGregorian 1970 1 1) 0
-      calendar = maybe (TimeUnit startDay S.empty S.empty)
-                       id
-                       (createCalendar startDay size)
-  in calendarSize calendar == 2 ^ (powerOfTwo size)
 
 symmetricalIntervalLength :: Calendar -> Bool
 symmetricalIntervalLength calendar =
-  maybe False id (checkSimmetry calZipper)
+  fromMaybe False (checkSimmetry calZipper)
   where
     calZipper = (calendar, [])
     -- ^ --
-    checkSimmetry ((TimeUnit _ _ _), _) = Just True
-    checkSimmetry (Empty _, _) = Just True
+    checkSimmetry (Unit{}, _) = Just True
     checkSimmetry zipper = do
       leftChild <- goLeft zipper
       rightChild <- goRight zipper
-      let (from1, to1) = getZipInterval leftChild
-          (from2, to2) = getZipInterval rightChild
-          intervalSymmetry = (getUTCdayNum to1) - (getUTCdayNum from1)
-                             == (getUTCdayNum to2) - (getUTCdayNum from2)
+      let i1 = getZipInterval leftChild
+          i2 = getZipInterval rightChild
+          intervalSymmetry = getUTCdayNum (getTo i1) - getUTCdayNum (getFrom i1)
+                             == getUTCdayNum (getTo i2) - getUTCdayNum (getFrom i2)
       return $ intervalSymmetry &&
-               maybe False id (checkSimmetry leftChild) &&
-               maybe False id (checkSimmetry rightChild)
+               fromMaybe False (checkSimmetry leftChild) &&
+               fromMaybe False (checkSimmetry rightChild)
 
 qMaxOfParentIncludedInChildren :: CalendarReservations -> Bool
-qMaxOfParentIncludedInChildren (CalReservs calendar reservs) = maybe False id $ do
+qMaxOfParentIncludedInChildren (CalReservs calendar reservs) = fromMaybe False $ do
   (SCalendar _ calendar') <- reserveManyPeriods reservs (SCalendar (S.fromList testIdentifiers) calendar)
-  checks <- sequence $ filter isJust ((checkQmax calendar') . reservToInterval <$> reservs)
+  checks <- sequence $ filter isJust (checkQmax calendar' . reservPeriod <$> reservs)
   return $ and checks
   where
-    reservToInterval (Reservation _ interval) = interval
-    -- ^ --
     checkQmax cal interval = do
       zipper <- goToNode interval cal
       zipParent <- goUp zipper
@@ -73,37 +57,32 @@ qMaxOfParentIncludedInChildren (CalReservs calendar reservs) = maybe False id $ 
                qMax `S.isSubsetOf` qMaxLChild
 
 quantityNotAvailableAfterReservation :: CalendarReservations -> Bool
-quantityNotAvailableAfterReservation (CalReservs calendar []) = False
-quantityNotAvailableAfterReservation (CalReservs calendar (reserv:_)) = maybe False id $ do
-  calendar' <- reservePeriod_ reserv calendar
+quantityNotAvailableAfterReservation (CalReservs _ []) = False
+quantityNotAvailableAfterReservation (CalReservs calendar (reserv:_)) = fromMaybe False $ do
+  calendar' <- reservePeriod' reserv calendar
   return $ not $
-    isQuantityAvailable (totalUnits - (S.size units) + 1)
-                        interval
+    isQuantityAvailable (totalUnits - S.size (reservUnits reserv) + 1)
+                        (reservPeriod reserv)
                         (SCalendar (S.fromList testIdentifiers) calendar')
   where
-    (Reservation units interval) = reserv
-    -- ^ --
     totalUnits = length testIdentifiers
 
 periodNotAvailableAfterReservation :: CalendarReservations -> Bool
-periodNotAvailableAfterReservation (CalReservs calendar []) = False
-periodNotAvailableAfterReservation (CalReservs calendar (reserv:_)) = maybe False id $ do
-  calendar' <- reservePeriod_ reserv calendar
+periodNotAvailableAfterReservation (CalReservs _ []) = False
+periodNotAvailableAfterReservation (CalReservs calendar (reserv:_)) = fromMaybe False $ do
+  calendar' <- reservePeriod' reserv calendar
   return $ not $
     isReservAvailable reserv (SCalendar (S.fromList testIdentifiers) calendar') &&
-    (S.size units) > 0
-  where
-    (Reservation units _) = reserv
-    -- ^ --
-    totalUnits = length testIdentifiers
+    S.size (reservUnits reserv) > 0
 
 reservAvailableAfterCancellation :: CalendarReservations -> Bool
-reservAvailableAfterCancellation (CalReservs calendar []) = False
-reservAvailableAfterCancellation (CalReservs calendar reservs) = maybe False id $ do
+reservAvailableAfterCancellation (CalReservs _ []) = False
+reservAvailableAfterCancellation (CalReservs calendar reservs) = fromMaybe False $ do
   (SCalendar _ calendar') <- reserveManyPeriods reservs
                                                 (SCalendar (S.fromList testIdentifiers) calendar)
-  calendar'' <- cancelManyPeriods (reservToCanc <$> reservs) calendar'
+  cancellations <- mapM reservToCanc reservs
+  calendar'' <- cancelManyPeriods cancellations calendar'
   return $ and $
-    (flip isReservAvailable) (SCalendar (S.fromList testIdentifiers) calendar'') <$> reservs
+    flip isReservAvailable (SCalendar (S.fromList testIdentifiers) calendar'') <$> reservs
   where
-    reservToCanc (Reservation units interval) = Cancellation units interval
+    reservToCanc reserv  = makeCancellation (reservPeriod reserv) (reservUnits reserv)

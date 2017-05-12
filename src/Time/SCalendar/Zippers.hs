@@ -1,21 +1,27 @@
-module Time.SCalendar.Zippers where
+module Time.SCalendar.Zippers
+  ( CalendarZipper
+  , goUp
+  , goLeft
+  , goRight
+  , upToRoot
+  , toZipper
+  ) where
 
 
-import Time.SCalendar.DataTypes ( Calendar(..)
-                                , From
-                                , To
-                                , Q
-                                , QN         )
+import Data.Set (Set)
+import Data.Text (Text)
+import Time.SCalendar.Types (Calendar(..), TimePeriod)
 
 
 -- | Zippers to move around the calendar | --
 
-data Crumb = LeftCrumb (From, To) Q QN Calendar
-           | RightCrumb (From, To) Q QN Calendar
+data Crumb = LeftCrumb TimePeriod (Set Text) (Set Text) Calendar
+           | RightCrumb TimePeriod (Set Text) (Set Text) Calendar
            deriving Eq
 
 instance Show Crumb where
-  show c = "crumb"
+  show LeftCrumb{} = "LeftCrumb"
+  show RightCrumb{} = "RightCrumb"
 
 
 type Breadcrumbs = [Crumb]
@@ -23,16 +29,14 @@ type CalendarZipper = (Calendar, Breadcrumbs)
 
 
 goLeft :: CalendarZipper -> Maybe CalendarZipper
-goLeft (Node (from, to) q qn left right, bs) =
-  Just (left, LeftCrumb (from, to) q qn right : bs)
-goLeft (TimeUnit _ _ _, _) = Nothing
-goLeft (Empty _, _) = Nothing
+goLeft (Node interval q qn left right, bs) =
+  Just (left, LeftCrumb interval q qn right : bs)
+goLeft (Unit{}, _) = Nothing
 
 goRight :: CalendarZipper -> Maybe CalendarZipper
-goRight(Node (from, to) q qn left right, bs) =
-  Just (right, RightCrumb (from, to) q qn left : bs)
-goRight (TimeUnit _ _ _, _) = Nothing
-goRight (Empty _, _) = Nothing
+goRight(Node interval q qn left right, bs) =
+  Just (right, RightCrumb interval q qn left : bs)
+goRight (Unit{}, _) = Nothing
 
 goUp :: CalendarZipper -> Maybe CalendarZipper
 goUp (calendar, LeftCrumb interval q qn right : bs)
@@ -46,3 +50,6 @@ upToRoot (node, []) = Just (node, [])
 upToRoot zipper = do
   parent <- goUp zipper
   upToRoot parent
+
+toZipper :: Calendar -> CalendarZipper
+toZipper calendar = (calendar, [])
