@@ -32,9 +32,9 @@ import Data.Set (Set)
 import qualified Data.Set as S (empty)
 
 
--- | Period Representation | --
 data TimePeriod = TimeInterval UTCTime UTCTime | TimeUnit UTCTime
   deriving (Eq, Show)
+
 
 isIncluded :: TimePeriod -> TimePeriod -> Bool
 isIncluded (TimeUnit _) (TimeUnit _) = False
@@ -56,7 +56,6 @@ toTimeUnit i@(TimeUnit _) = i
 toTimeUnit i@(TimeInterval t1 t2)
   | t1 == t2 = TimeUnit t1
   | otherwise = i
--- | --
 
 
 data Reservation = Reservation
@@ -87,7 +86,7 @@ data SCalendar = SCalendar
   , calendar :: Calendar
   } deriving (Eq, Show)
 
--- | Constructors | --
+
 makeTimePeriod :: Integer -> Int -> Int -> Int -> Maybe TimePeriod
 makeTimePeriod _ _ _ numDays
   | numDays < 0 = Nothing
@@ -115,9 +114,6 @@ makeCancellation period units
   where
     period' = toTimeUnit period
 
--- | Basic calendar constructor: It takes a first day represented by *year/mont/day* and the size of the
---   calendar (NumDays) and returns a Calendar whose size is the first power of 2 which
---   is equal or greater that the number of days we want.
 createCalendar :: Integer -> Int -> Int -> Int -> Maybe Calendar
 createCalendar year month day numDays
   | numDays <= 1 = Nothing
@@ -139,25 +135,17 @@ createCalendar year month day numDays
         parentDist = (2^factor) - 1
         childDist = 2^(factor - 1)
 
-
--- | This is like createCalendar, but this function attaches a set of Identifiers
---   to the Calendar.
 createSCalendar :: Integer -> Int -> Int -> Int -> Set Text -> Maybe SCalendar
 createSCalendar _ _ _ _ tUnits
   | null tUnits = Nothing
 createSCalendar year month day numDays tUnits = do
   calendar <- createCalendar year month day numDays
   return $ SCalendar tUnits calendar
--- | --
 
-
-
--- | UTILITY FUNCTIONS | --
 isValidInterval :: TimePeriod -> Bool
 isValidInterval (TimeUnit _) = True
 isValidInterval (TimeInterval from to) = from < to
 
--- | Find the first power of 2 that makes 2^n equal or greater than n.
 powerOfTwo :: Int -> Int
 powerOfTwo n =
   let power = ceiling $ logBase 2 (fromIntegral $ abs n)
@@ -165,4 +153,3 @@ powerOfTwo n =
 
 oneDay :: NominalDiffTime
 oneDay = 86400
--- | UTILITY FUNCTIONS | --
