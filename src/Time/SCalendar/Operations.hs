@@ -25,8 +25,13 @@ import qualified Data.Set as S ( null
                                , union
                                , unions   )
 
-
-augmentCalendar :: SCalendar -> Int -> Maybe SCalendar
+-- | Given an SCalendar of size 2^n, this function increases its size k times, that is,
+-- 2^(n+k). The new SCalendar is properly updated up to its root so that it will render
+-- the same results as the previous one. For example, given an SCalendar `c` of size 2^5=32,
+-- 'augmentCalendar c 3' would produce a new SCalendar of size 2^(5+3)=256.
+augmentCalendar :: SCalendar -- ^ SCalendar to be augmented.
+                -> Int -- ^ Number of times by which the SCalendar will be augmented.
+                -> Maybe SCalendar
 augmentCalendar _ k
   | k <= 0 = Nothing
 augmentCalendar scal k = do
@@ -41,7 +46,16 @@ augmentCalendar scal k = do
   (root, _) <- upToRoot updatedCal
   return $ SCalendar (calUnits scal) root
 
-isQuantityAvailable :: Int -> TimePeriod -> SCalendar -> Bool
+-- | Given a quantity, this function determines if it is available in a TimePeriod for a
+-- specific SCalendar. Thus, it does not take into account the particular resources whose
+-- availability wants to be determined: it is only concerned with the availabilty of a quantity
+-- in a specific SCalendar.
+isQuantityAvailable :: Int -- ^ Quantity of resources.
+                    -> TimePeriod -- ^ TimePeriod over which we want to determine the availability of
+                                  -- the quantity.
+                    -> SCalendar -- ^ SCalendar over which we want to determine the availability of
+                                 -- the quantity in a Given TimePeriod.
+                    -> Bool
 isQuantityAvailable quant interval scal
   | S.null (calUnits scal) = False
   | quant <= 0 = False
@@ -49,6 +63,10 @@ isQuantityAvailable quant interval scal
   | not $ intervalFitsCalendar interval (calendar scal) = False
   | otherwise = checkQuantAvailability (toTimeUnit interval) quant (calUnits scal) (calendar scal, [])
 
+-- | Given a Reservation, this function determines if it is available in a SCalendar. A
+-- Reservation is the product of a set of identifiers which point to reservable resources
+-- and a TimePeriod over which those resources are to be reserved. Thus, this function
+-- checks if that particular set of resources is available for a TimePeriod in the given SCalendar.
 isReservAvailable :: Reservation -> SCalendar -> Bool
 isReservAvailable reservation scal
   | S.null (calUnits scal) = False
