@@ -74,6 +74,11 @@ isReservAvailable reservation scal
   | not $ intervalFitsCalendar (reservPeriod reservation) (calendar scal) = False
   | otherwise = checkReservAvailability reservation (calUnits scal) (calendar scal, [])
 
+-- | This function introduces a new Reservation in a Calendar. Note that since no availability check
+-- is performed before introducing the Reservation, here we use a plain Calendar. Thus this function
+-- is useful to introduce Reservations without any constraint, but that's why it must be used carefully
+-- since information can be lost due to the usage of the union set-operation to update the Q and QN sets
+-- in the Calendar.
 reservePeriod' :: Reservation -> Calendar -> Maybe Calendar
 reservePeriod' reservation calendar = do
   let interval = (toTimeUnit . reservPeriod) reservation
@@ -81,6 +86,7 @@ reservePeriod' reservation calendar = do
   let tmIntervals = fmap getZipInterval tmNodes
   updateCalendar tmIntervals (reservUnits reservation) calendar (\x y -> Just $ S.union x y)
 
+-- | This function is like reservePeriod' but adds a list of Reservations without any availabilty check.
 reserveManyPeriods' :: [Reservation] -> Calendar -> Maybe Calendar
 reserveManyPeriods' [] calendar = Just calendar
 reserveManyPeriods' (reservation:rs) calendar = do
@@ -92,6 +98,10 @@ reserveManyPeriods' (reservation:rs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = reservePeriod' res cal
 
+-- | This function introduces a new Reservation in a SCalendar applying an availability check. This means
+-- that if the reservation conflicts with others already made in the SCalendar, it will no be introduced.
+-- Thus this function takes into account the set of reservable identifiers for the SCalendar to calculate
+-- the subset of available ones and introduce the Reservation if possible.
 reservePeriod :: Reservation -> SCalendar -> Maybe SCalendar
 reservePeriod reservation scalendar
   | not $ isReservAvailable reservation scalendar = Nothing
@@ -99,6 +109,10 @@ reservePeriod reservation scal = do
   updatedCalendar <- reservePeriod' reservation (calendar scal)
   return $ SCalendar (calUnits scal) updatedCalendar
 
+-- | This function is like reservePeriod but introduces several Reservations at once. It is important to note
+-- that if a Reservation in the list conflicts with others already made in the SCalendar, it will be excluded.
+-- Thus the order of the Reservations in the list matters, since if one Reservation passes the availability check
+-- but the next one does not, then latter will be excluded.
 reserveManyPeriods :: [Reservation] -> SCalendar -> Maybe SCalendar
 reserveManyPeriods [] calendar = Just calendar
 reserveManyPeriods (reservation:rs) calendar = do
