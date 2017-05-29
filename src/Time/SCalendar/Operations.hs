@@ -124,6 +124,9 @@ reserveManyPeriods (reservation:rs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = reservePeriod res uCal
 
+-- | This function removes reserved identifiers in a Calendar according to the Set of identifiers and TimePeriod
+-- specified in the Cancellation. Thus a Cancellation only affects the nodes whose upper or lower bounds are
+-- included in the TimePeriod of the Cancellation.
 cancelPeriod :: Cancellation -> Calendar -> Maybe Calendar
 cancelPeriod cancellation calendar = do
   tmNodes <- topMostNodes (cancPeriod cancellation) calendar
@@ -134,6 +137,7 @@ cancelPeriod cancellation calendar = do
       | not $ S.isSubsetOf y x = Nothing
       | otherwise = Just (S.difference x y)
 
+-- | This is like cancelPeriod but performs several Cancellations at once.
 cancelManyPeriods :: [Cancellation] -> Calendar -> Maybe Calendar
 cancelManyPeriods [] calendar = Just calendar
 cancelManyPeriods (cancellation:cs) calendar = do
@@ -145,6 +149,8 @@ cancelManyPeriods (cancellation:cs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = cancelPeriod canc cal
 
+-- | Given a TimePeriod and a SCalendar, this function returns a Report which summarizes important
+-- data about the reserved and available identifiers in that SCalendar.
 periodReport :: TimePeriod -> SCalendar -> Maybe Report
 periodReport interval scal = do
   guard $ intervalFitsCalendar interval (calendar scal)
