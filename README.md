@@ -1,17 +1,15 @@
-# SCalendar: Haskell Library to deal with resource availability in a Calendar.
-
-[![CircleCI](https://circleci.com/gh/stackbuilders/scalendar/tree/sp_implementing_tests.svg?style=svg&circle-token=f5ee5fb55eccb79614e62adbc96839595623af5c)](https://circleci.com/gh/stackbuilders/scalendar/tree/sp_implementing_tests)
+# scalendar: Haskell Library to deal with resource availability in a Calendar.
 
 This is a library for handling calendars and resource availability based on the
-"top-nodes" algorithm and set operations. That's why it is called `SCalendar`: Calendars
-which use Sets.
-Since the bare "top-nodes" algorithm is not enough to IDENTIFY which are the
+`top-nodes algorithm` and set operations. That's why it is called `scalendar`: Calendars
+which which keep track of the availability of a set of resources.
+Since the bare `top-nodes algorithm` is not enough to IDENTIFY which are the
 specific resources which are available in a given period of time - for example,
-the id of the rooms which can still be reserved in a given checkIn-checkOut
+the id of the rooms which can still be reserved in a given `(checkIn-checkOut)`
 interval - it was necessary to generalize that algorithm to work on sets of
 strings which identify the available resources in a period. That generalization
 was pretty smooth since addition in numbers was replaced by set Union and substraction
-in numbers was replaced by set difference. Another important fact about sets is that
+in numbers was replaced by set Difference. Another important fact about sets is that
 they do not allow duplicates, so every identifier is guaranteed to be unique.
 
 
@@ -20,111 +18,128 @@ they do not allow duplicates, so every identifier is guaranteed to be unique.
 
 # Data Types
 
-`SCalendar` is a library based on binary trees, where a Calendar is defined as follows:
+`scalendar` is a library based on binary trees, where a Calendar is defined as follows:
 
 ```
-data Calendar = TimeUnit Unit Q QN
-              | Empty (From, To)
-              | Node (From, To) Q QN Calendar Calendar
+data Calendar =
+    Unit TimePeriod (Set Text) (Set Text)
+  | Node TimePeriod (Set Text) (Set Text) Calendar Calendar
+
+data TimePeriod =
+    TimeInterval UTCTime UTCTime
+  | TimeUnit UTCTime
 ```
 
+The idea is that each node in the calendar will store a TimePeriod which is a data type which stores
+a time-interval with an`start-date` and an `end-date`.
 
-The idea is that each node in the calendar will store a time interval (From, To)
-where both From and To are of type [UTCTime](https://hackage.haskell.org/package/time-1.6.0.1/docs/Data-Time-Clock.html):
-
-The purpose is that terminal nodes (leaves) will represent a time unit (for example, a
-day). Thus we have Nodes and TimeUnits which are the only type constructors which
-store Q and QN sets.
+The purpose is that terminal nodes (leaves) will represent a unit of time, `TimeUnit`, which in this case
+is a nominal day or 86400 seconds. Thus non-terminal nodes are intended to store a `TimeInterval` and
+leaves are intended to store `TimeUnits`. Both leaves and nodes store `Q` and `QN` sets, which are the
+data structures which allow the Calendar to keep track of the availability of a set of resources.
 For more information about the time representation according to the `top-nodes`
 algorithm check [this](https://en.wikipedia.org/wiki/Top-nodes_algorithm)
 
-The `Empty` Constructor is just to represent an empty Calendar.
-
 Knowing what the `Q` and `QN` sets mean is not quite important to use this library but
 roughly:
- - `QN(Node)` represents reserved elements for all reservations having this node as top-node
+ - `QN(Node)` represents reserved elements for all reservations having this node as `top-node`
  - `Q(Node) = U(Q(LeftChild), Q(RightChild)) U QN(Node)`
-
 
 In order to use this library, it only suffices to know the meaning of the following
 data type:
 
 ```
-data SCalendar = SCalendar TotalUnits Calendar
+data SCalendar = SCalendar
+  { calUnits :: Set Text
+  , calendar :: Calendar
+  } deriving (Eq, Show)
 ```
 
-
-TotalUnits is a type synonym for `(Set T.Text)` and thus a `SCalendar` is only a pair of
-a set of identifiers for a group of available resources - for example, the numbers
-which are used to identify rooms in a hotel `{"101", "102", ...}` - and a `Calendar`, which
-is the tree that handles time intervals.
+An `SCalendar` is only a product type of a set of identifiers and a group of available resources - for
+example, the numbers which are used to identify rooms in a hotel `{"101", "102", ...}` - and a `Calendar`,
+which is the tree that keeps track of the availability of that set of resources.
 
 Other important data types are:
 
 
-- `data Reservation = Reservation (S.Set T.Text) (From, To)`
+- ```
+  data Reservation = Reservation
+    { reservUnits :: Set Text
+    , reservPeriod :: TimePeriod
+    }
+  ```
 
-  which represents a set of resources we want to reserve in a period of time `(From, To)`
-  from a `SCalendar`.
+  which represents a set of resources we want to reserve over a `TimePeriod` in a `SCalendar`.
 
+- ```
+  data Cancellation = Cancellation
+    { cancUnits :: Set Text
+    , cancPeriod :: TimePeriod
+    }
+  ```
 
-- `data Cancellation = Cancellation (S.Set T.Text) (From, To)`
+  which represents a set of resources we want to cancel over a `TimePeriod` in a `SCalendar`
 
-  which represents a set of resources we want to cancel in a period of time `(From, To)``
-  from a `SCalendar`.
-
-- `data Report = Report (From, To) TotalUnits SQMax Remaining`
-
-  which represents a Report for a given period of time where a Report has the following
+- ```
+  data Report = Report
+    { reportPeriod :: TimePeriod
+    , totalUnits :: Set Text
+    , reservedUnits :: Set Text
+    , remainingUnits :: Set Text
+    }
+  ```
+  which represents a `Report` for a given `TimePeriod` where a `Report` has the following
   information:
-   - `TotalUnits`: The set of total identifiers for resources which can be reserved in a
-     calendar.
-   - `SQMax`: The set of identifiers for resources which have been reserved for a period
-     `(From, To)`.
-   - `Remaining`: The set of remaining identifiers for resources which can still be
-     reserved without creating conflicts in a period of time `(From, To)`.
-
+   - `totalUnits`: The set of total identifiers for resources which can be reserved in a
+     `SCalendar`.
+   - `reservedUnits`: The set of identifiers for resources which have been reserved for a `TimePeriod`.
+   - `remainingUnits`: The set of remaining identifiers for resources which can still be
+      reserved without creating conflicts in a `TimePeriod`.
 
 
 # Creating a Calendar
 
-All the fundamental operations to manage calendar are located in `SCalendar.Operations`
+Functions to create Calendars are located in `Time.SCalendar.Types`
 
 To create a bare `Calendar` which is not associated to any set of identifiers we can use
 
 ```
-createCalendar :: UTCTime -> NumDays -> Maybe Calendar
+createCalendar :: Integer -- Year.
+               -> Int -- Month.
+               -> Int -- Day.
+               -> Int -- NumDays.
+               -> Maybe Calendar
 ```
 
 where
- - `UTCTime`: The starting point of time of the calendar, for example, it could be
-   a calendar starting from `2016-05-04T00:00:00-05:00`.
- - `Numdays`: A type synonym for `Int` which represents the size of the calendar. For
-   implementation reasons the size will always be a power of 2. Thus if you
-   provide 30 as `NumDays`, the function will choose the first power of 2 which is
-   equal or greater than 30, that is, 32.
+ - `Year`: It is an `Integer` representing the starting year of the `Calendar`. For example
+    `2017`.
+ - `Month`: It is an `Int` representing the starting month of the `Calendar`. For
+    example, `2` is equivalent to February.
+ - `Day`: It is an `Int` representing the starting day of the `Calendar`. It can be
+    any number representing one of the days of `Month`.
+ - `NumDays`: It is the number of Days we want our `Calendar` to cover. The days covered
+    by it will always be a power of `2`. Thus if you input `30`, `createCalendar` will
+    find the first power of `2` which is greater or equal to `32`, in this case `2^5 = 32`.
 
-So if everything is ok, this function Just returns a new `Calendar` which is suitable for
+So if everything is ok, this function `Just` returns a new `Calendar` which is suitable for
 the given `NumDays`. A new `Calendar` is one which has neither reservations nor cancellations.
 
-
-`createSCalendar` is almost like `createCalendar` but instead of returning a bare calendar,
-it returns a `SCalendar` which is a calendar together with a set of strings (of type `Text`)
-which uniquely identify a group of available resources. Here is that function's type
-and an example:
+`createSCalendar` is almost like `createCalendar` but instead of returning a bare `Calendar`,
+it returns an `SCalendar` which is a `Calendar` together with a set of identifiers (of type `Text`)
+which uniquely identify a group of available resources. The following example create an `SCalendar`
+of `2 ^ 8 = 512 days` starting from `2016-February-2` with a set of identifiers `{ a, b, c, d }`
 
 ```
-createSCalendar :: UTCTime -> NumDays -> S.Set T.Text -> Maybe SCalendar
+createSCalendar :: Integer -- Year.
+                -> Int -- Month.
+                -> Int -- Day.
+                -> Int -- NumDays.
+                -> Set Text -- Set of Identifiers
+                -> Maybe SCalendar
 
-start = UTCTime (fromGregorian 2016 07 10) 0
-
-createCalendar start 128 (fromList ["a", "b", "c", "d"])
+createSCalendar 2017 2 1 365 (Set.fromList ["a", "b", "c", "d"])
 ```
-
-Here we are creating a calendar of 128 days (about 4 months) that starts from
-`2016-01-01T00:00:00-05:00`.
-
-
 
 # Checking Availability
 
