@@ -146,12 +146,12 @@ createSCalendar 2017 2 1 365 (Set.fromList ["a", "b", "c", "d"])
 There are two functions to check availability for a reservation. The first one is
 
 ```
-isQuantityAvailable :: Int -> (From, To) -> SCalendar -> Bool
+isQuantityAvailable :: Int -> TimePeriod -> SCalendar -> Bool
 ```
 
-where Int is an amount of resource we want to reserve, `(From, To)` is the period of
+where `Int` is an amount of resource we want to reserve, `TimePeriod` is the period of
 time we want to reserve for that amount of resource, and `SCalendar` is the calendar
-where we want to check availability. Naturally, this function returns a bool if the
+where we want to check availability. Naturally, this function returns a `Bool` if the
 amount of resources is available.
 Note that here we are just concerned with the amount of resources and whether there is
 some set of identifiers whose size is greater of equal to that amount. If we need
@@ -164,27 +164,23 @@ isReservAvailable :: Reservation -> SCalendar -> Bool
 
 which is almost like the first function, but here we are taking into account the set
 of strings which identifies the resources we want to reserve since we are providing
-a `Reservation` as input. For example:
+a `Reservation` as input.
 
-```
-isReservAvailable (Reservation (fromList ["a", "b", "c", "d"]) (from, to))
-                  (SCalendar ["a", "b", "c", "d"] calendar)
-```
 
 # Adding reservations to a Calendar
 
 There are two pairs of functions to add reservations to a calendar:
 
 ```
-reservPeriod_ :: Reservation -> Calendar -> Maybe Calendar
+reservPeriod' :: Reservation -> Calendar -> Maybe Calendar
 ```
 
 which inserts reservations into a calendar without any constraint.  That's it, this
-function does not apply any availability check before making the reservation. That's
+function does not apply any availability check before making the `Reservation`. That's
 why this function does not need a `SCalendar`, because it does not need to take
 into account the set of total available resources.
 
-The safe version is `reservPeriod` (without the underscore) which enforces the
+The safe version is `reservPeriod` (without the quote) which enforces the
 `isReservAvailable` check over that reservation before adding it. Its type is
 
 ```
@@ -198,9 +194,9 @@ The other pair of functions are quite similar but are handy for adding a list of
 reservations at once:
 
 ```
-reserveManyPeriods_ :: [Reservation] -> Calendar -> Maybe Calendar
+reserveManyPeriods' :: [Reservation] -> Calendar -> Maybe Calendar
 ```
-which adds several reservations at once in a Calendar without any check.
+which adds several reservations at once in a Calendar without any availability check.
 
 ```
 reserveManyPeriods :: [Reservation] -> SCalendar -> Maybe SCalendar
@@ -208,7 +204,7 @@ reserveManyPeriods :: [Reservation] -> SCalendar -> Maybe SCalendar
 which  will return a `SCalendar` only with the reservations that pass the
 `isReservAvailable` test. Here we must take into consideration that reservations will be
 inserted in the same order they come in the input list. So, if a reservation conflicts
-with the ones that have been already inserted, it will not be included in the tree.
+with the ones that have been already inserted, it will not be included in the `SxCalendar`.
 
 
 
@@ -256,32 +252,44 @@ It is very useful to have an operation which can summarize some information abou
 state of the calendar in a given period of time. That's why this library has
 
 ```
-periodReport :: (From, To) -> SCalendar -> Maybe Report
+periodReport :: TimePeriod  -> SCalendar -> Maybe Report
 ```
 
-where `(From, To)` is the interval of time you would like the `Report` to summarize and
-`SCalendar` is the calendar we are working on. This function returns a report over that
+where `TimePeriod` is the interval of time you would like the `Report` to summarize and
+`SCalendar` is the calendar we are working on. This function returns a `Report` over that
 period of time with the following information:
-  - `TotalUnits`: The set of total identifiers for resources in the `SCalendar`,
-    in other words, the set part of (`SCalendar` set calendar).
-  - `SQMax`: The set of resources which have been reserved for that period of time.
-  - `Remaining`: The set of remaining  resources which can still be reserved without
-    creating conflicts in a period of time `(From, To)`.
+  - `totalUnits`: The set of total identifiers for resources in the `SCalendar`,
+    in other words, the set part of `(SCalendar set calendar)`.
+  - `reservedUnits`: The set of resources which have been reserved for that period of time.
+  - `remainingUnits`: The set of remaining  resources which can still be reserved without
+    creating conflicts in a `TimePeriod`.
 
-Note that `TotalUnits`, `SQMax`, `Remaining` are all of type `Set`, and that `Report` is
-something like `(Report Set Set Set)`.
+Note that `totalUnits`, `reservedUnits`, `remainingUnits` are all of type `Set`, and that the type
+of `Report` is :
 
+  ```
+  data Report = Report
+    { reportPeriod :: TimePeriod
+    , totalUnits :: Set Text
+    , reservedUnits :: Set Text
+    , remainingUnits :: Set Text
+    }
+  ```
 
 # Have Fun!
 
 So if you find this library useful, have fun with it in applications which need some
-sort of calendar and resource availability management!!!!!!!
+sort of calendar and resource availability management!!
 
 
 
 # Acknowledgements
 
-The base code for this library was written by Sebastián Pulido Gómez.
+The base code for this library was written by [Sebastián Pulido Gómez](https://github.com/sebashack) and
+was sponsored by [Stack Builders](https://www.stackbuilders.com/)
+
+Thanks to [Mark Karpov](https://www.stackbuilders.com/) and [Javier Casas](https://github.com/javcasas) for
+their code reviews and suggestions.
+
 The author of the algorithm is Rayrole, Martin: "Method and device or arrangement for the management of a resource schedule." U.S. Patent Application No. 10/764,526.
-There is an improvement of the algorithm suggested by the author:
-     http://www.researchgate.net/publication/311582722_Method_of_Managing_Resources_in_a_Telecommunication_Network_or_a_Computing_System
+You can find the author's article about the algorithm [here](http://www.researchgate.net/publication/311582722_Method_of_Managing_Resources_in_a_Telecommunication_Network_or_a_Computing_System)

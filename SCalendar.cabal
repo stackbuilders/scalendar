@@ -5,8 +5,9 @@ synopsis:            This is a library for handling calendars and resource avail
 homepage:            https://github.com/stackbuilders/scalendar
 license:             MIT
 license-file:        LICENSE
+copyright:           2017 Stack Builders Inc.
 author:              Sebastian Pulido Gómez <spulido@stackbuilders.com>
-maintainer:          Sebastian Pulido Gómez <spulido@stackbuilders.com>
+maintainer:          Stack Builders <hackage@stackbuilders.com>
 category:            Time
 build-type:          Simple
 cabal-version:       >=1.10
