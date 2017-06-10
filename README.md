@@ -204,7 +204,7 @@ reserveManyPeriods :: [Reservation] -> SCalendar -> Maybe SCalendar
 which  will return a `SCalendar` only with the reservations that pass the
 `isReservAvailable` test. Here we must take into consideration that reservations will be
 inserted in the same order they come in the input list. So, if a reservation conflicts
-with the ones that have been already inserted, it will not be included in the `SxCalendar`.
+with the ones that have been already inserted, it will not be included in the `SCalendar`.
 
 
 
