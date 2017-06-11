@@ -1,5 +1,7 @@
 # scalendar: Haskell Library to deal with resource availability in a Calendar.
 
+[![Build Status](https://travis-ci.org/stackbuilders/scalendar.svg?branch=master)](https://travis-ci.org/stackbuilders/scalendar)
+
 This is a library for handling calendars and resource availability based on the
 `top-nodes algorithm` and set operations. That's why it is called `scalendar`: Calendars
 which which keep track of the availability of a set of resources.

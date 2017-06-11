@@ -3,7 +3,7 @@ module Time.SCalendar.Operations
   , isQuantityAvailable
   , isReservAvailable
   , reservePeriod'
-  , reservPeriod
+  , reservePeriod
   , reserveManyPeriods
   , reserveManyPeriods'
   , cancelPeriod
