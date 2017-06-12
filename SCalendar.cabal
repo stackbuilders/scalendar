@@ -1,12 +1,14 @@
 name:                SCalendar
 version:             0.1.0.0
+tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.1
 synopsis:            This is a library for handling calendars and resource availability
                      based on the "top-nodes algorithm" and set operations.
 homepage:            https://github.com/stackbuilders/scalendar
 license:             MIT
 license-file:        LICENSE
+copyright:           2017 Stack Builders Inc.
 author:              Sebastian Pulido Gómez <spulido@stackbuilders.com>
-maintainer:          Sebastian Pulido Gómez <spulido@stackbuilders.com>
+maintainer:          Stack Builders <hackage@stackbuilders.com>
 category:            Time
 build-type:          Simple
 cabal-version:       >=1.10

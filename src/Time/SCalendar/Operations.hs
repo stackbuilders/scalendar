@@ -3,7 +3,7 @@ module Time.SCalendar.Operations
   , isQuantityAvailable
   , isReservAvailable
   , reservePeriod'
-  , reservPeriod
+  , reservePeriod
   , reserveManyPeriods
   , reserveManyPeriods'
   , cancelPeriod
@@ -25,10 +25,13 @@ import qualified Data.Set as S ( null
                                , union
                                , unions   )
 
-
--- | Given a calendar of size 2^n, this function augments that calendar k times,
---   that is, 2^(n+k). The new calendar is  properly updated.
-augmentCalendar :: SCalendar -> Int -> Maybe SCalendar
+-- | Given an SCalendar of size 2^n, this function increases its size k times, that is,
+-- 2^(n+k). The new SCalendar is properly updated up to its root so that it will render
+-- the same results as the previous one. For example, given an SCalendar `c` of size 2^5=32,
+-- 'augmentCalendar c 3' would produce a new SCalendar of size 2^(5+3)=256.
+augmentCalendar :: SCalendar -- ^ SCalendar to be augmented.
+                -> Int -- ^ Number of times by which the SCalendar will be augmented.
+                -> Maybe SCalendar
 augmentCalendar _ k
   | k <= 0 = Nothing
 augmentCalendar scal k = do
@@ -37,18 +40,22 @@ augmentCalendar scal k = do
       (UTCTime gregDay _) = from
       (year, month, day) = toGregorian gregDay
       newSize = daysBetween from to * (2^k)
-  -- ^ create a bigger calendar with a space for our smaller calendar
   largerCal <- createCalendar year month day newSize
   (_, bs) <- goToNode interval largerCal
-  -- ^ put the smaller calendar in the slot and update the larger calendar
   updatedCal <- updateQ (calendar scal, bs)
   (root, _) <- upToRoot updatedCal
   return $ SCalendar (calUnits scal) root
 
--- | Given an interval, an amount of units to be reserved, the number of
---   available units and a calendar this function determines if that period of time
---   and quantity are available in that calendar.
-isQuantityAvailable :: Int -> TimePeriod -> SCalendar -> Bool
+-- | Given a quantity, this function determines if it is available in a TimePeriod for a
+-- specific SCalendar. Thus, it does not take into account the particular resources whose
+-- availability wants to be determined: it is only concerned with the availabilty of a quantity
+-- in a specific SCalendar.
+isQuantityAvailable :: Int -- ^ Quantity of resources.
+                    -> TimePeriod -- ^ TimePeriod over which we want to determine the availability of
+                                  -- the quantity.
+                    -> SCalendar -- ^ SCalendar over which we want to determine the availability of
+                                 -- the quantity in a Given TimePeriod.
+                    -> Bool
 isQuantityAvailable quant interval scal
   | S.null (calUnits scal) = False
   | quant <= 0 = False
@@ -56,8 +63,10 @@ isQuantityAvailable quant interval scal
   | not $ intervalFitsCalendar interval (calendar scal) = False
   | otherwise = checkQuantAvailability (toTimeUnit interval) quant (calUnits scal) (calendar scal, [])
 
--- | Given a Reservation, and a SCalendar this function determines if that reservation is
---   available in that calendar.
+-- | Given a Reservation, this function determines if it is available in a SCalendar. A
+-- Reservation is the product of a set of identifiers which point to reservable resources
+-- and a TimePeriod over which those resources are to be reserved. Thus, this function
+-- checks if that particular set of resources is available for a TimePeriod in the given SCalendar.
 isReservAvailable :: Reservation -> SCalendar -> Bool
 isReservAvailable reservation scal
   | S.null (calUnits scal) = False
@@ -65,9 +74,11 @@ isReservAvailable reservation scal
   | not $ intervalFitsCalendar (reservPeriod reservation) (calendar scal) = False
   | otherwise = checkReservAvailability reservation (calUnits scal) (calendar scal, [])
 
--- | This function inserts reservations into a calendar without any constraint. This function
---   is useful if you want to insert reservations which are not included in the current
---   TotalUnits of an SCalendar.
+-- | This function introduces a new Reservation in a Calendar. Note that since no availability check
+-- is performed before introducing the Reservation, here we use a plain Calendar. Thus this function
+-- is useful to introduce Reservations without any constraint, but that's why it must be used carefully
+-- since information can be lost due to the usage of the union set-operation to update the Q and QN sets
+-- in the Calendar.
 reservePeriod' :: Reservation -> Calendar -> Maybe Calendar
 reservePeriod' reservation calendar = do
   let interval = (toTimeUnit . reservPeriod) reservation
@@ -75,7 +86,7 @@ reservePeriod' reservation calendar = do
   let tmIntervals = fmap getZipInterval tmNodes
   updateCalendar tmIntervals (reservUnits reservation) calendar (\x y -> Just $ S.union x y)
 
--- | This is like reservePeriod_ but reserves many periods at once.
+-- | This function is like reservePeriod' but adds a list of Reservations without any availabilty check.
 reserveManyPeriods' :: [Reservation] -> Calendar -> Maybe Calendar
 reserveManyPeriods' [] calendar = Just calendar
 reserveManyPeriods' (reservation:rs) calendar = do
@@ -87,9 +98,10 @@ reserveManyPeriods' (reservation:rs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = reservePeriod' res cal
 
--- | Given a period of time, a set of units to be reserved, and a SCalendar
---   this function returns a new Calendar with a a reservation over that period of
---   time if it is available. The SCalendar returned by this function is a root Node.
+-- | This function introduces a new Reservation in a SCalendar applying an availability check. This means
+-- that if the reservation conflicts with others already made in the SCalendar, it will no be introduced.
+-- Thus this function takes into account the set of reservable identifiers for the SCalendar to calculate
+-- the subset of available ones and introduce the Reservation if possible.
 reservePeriod :: Reservation -> SCalendar -> Maybe SCalendar
 reservePeriod reservation scalendar
   | not $ isReservAvailable reservation scalendar = Nothing
@@ -97,11 +109,10 @@ reservePeriod reservation scal = do
   updatedCalendar <- reservePeriod' reservation (calendar scal)
   return $ SCalendar (calUnits scal) updatedCalendar
 
--- | This function is like reservePeriod, but instead of making one reservation at a time,
---   it takes a list of reservations. This function will return a calendar only with the ones
---   that pass the isReservAvailable test. Take into account that reservations will be inserted
---   in the tree in the order they are in the input list. So, if a reservation conflicts with the
---   ones that have been alredy inserted, it will not be included in the tree.
+-- | This function is like reservePeriod but introduces several Reservations at once. It is important to note
+-- that if a Reservation in the list conflicts with others already made in the SCalendar, it will be excluded.
+-- Thus the order of the Reservations in the list matters, since if one Reservation passes the availability check
+-- but the next one does not, then latter will be excluded.
 reserveManyPeriods :: [Reservation] -> SCalendar -> Maybe SCalendar
 reserveManyPeriods [] calendar = Just calendar
 reserveManyPeriods (reservation:rs) calendar = do
@@ -113,20 +124,11 @@ reserveManyPeriods (reservation:rs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = reservePeriod res uCal
 
--- | This operation takes a Cancellation and returns a new calendar with that Cancellation
---   subtracted from the top-nodes of that Cancellation (Q is therefore updated all over the tree).
---   Be careful with this operation: Two reservations might have the same top nodes, so you
---   must have a way to keep track which elements belong to one reservation and to the other one.
---   deletion in your data base.
---   Note that deleting units from a tree does not prevent you from deleting from a reservation
---   that has never been made. For example, if you have previously reserved n units for (2,7), that
---   reservation will be affected if you delete from a period of time like (2,5). That's why whenever you
---   subtract units from a tree, you must be certain that the period of time has been previously reserved.
---   Also, note that you cannot delete more units than QN, that is, if
---   (size unitsToDelete) > (size QN(node)), a Nothing will be propagated.
+-- | This function removes reserved identifiers in a Calendar according to the Set of identifiers and TimePeriod
+-- specified in the Cancellation. Thus a Cancellation only affects the nodes whose upper or lower bounds are
+-- included in the TimePeriod of the Cancellation.
 cancelPeriod :: Cancellation -> Calendar -> Maybe Calendar
 cancelPeriod cancellation calendar = do
-  -- ^ To delete from  a previous reservation, we must know its top-nodes.
   tmNodes <- topMostNodes (cancPeriod cancellation) calendar
   let tmIntervals = fmap getZipInterval tmNodes
   updateCalendar tmIntervals (cancUnits cancellation) calendar diff
@@ -135,7 +137,7 @@ cancelPeriod cancellation calendar = do
       | not $ S.isSubsetOf y x = Nothing
       | otherwise = Just (S.difference x y)
 
--- | This is like cancelPeriod but cancels many periods at once.
+-- | This is like cancelPeriod but performs several Cancellations at once.
 cancelManyPeriods :: [Cancellation] -> Calendar -> Maybe Calendar
 cancelManyPeriods [] calendar = Just calendar
 cancelManyPeriods (cancellation:cs) calendar = do
@@ -147,8 +149,8 @@ cancelManyPeriods (cancellation:cs) calendar = do
       | otherwise = maybeCalendar
       where maybeCalendar = cancelPeriod canc cal
 
--- | Given a period of time and a Calendar, this function returns a Report which
---   summarizes important data about that period of time.
+-- | Given a TimePeriod and a SCalendar, this function returns a Report which summarizes important
+-- data about the reserved and available identifiers in that SCalendar.
 periodReport :: TimePeriod -> SCalendar -> Maybe Report
 periodReport interval scal = do
   guard $ intervalFitsCalendar interval (calendar scal)
