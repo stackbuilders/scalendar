@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Booking.Types where
 
@@ -6,18 +7,22 @@ import qualified Data.Set  as S
 import qualified Data.Text as T
 import qualified Data.Time as TM
 
-type CheckIn = MkCheckIn TM.UTCTime
-type CheckOut = MkCheckOut TM.UTCTime
+newtype CheckIn = MkCheckIn TM.UTCTime
+  deriving (Show)
+
+newtype CheckOut = MkCheckOut TM.UTCTime
+  deriving (Show)
+
 type Name = T.Text
 
 data Room = MkRoom {
-  id   :: Integer,
-  name :: Name
+    id   :: Integer
+  , name :: Name
 } deriving (Show)
 
 data Reservation = MkReservation {
-  name     :: Name,
-  checkIn  :: CheckIn,
-  checkOut :: CheckOut,
-  rooms    :: [Room]
+    name     :: Name
+  , checkIn  :: CheckIn
+  , checkOut :: CheckOut
+  , rooms    :: [Room] -- sets or lists?
 } deriving (Show)
