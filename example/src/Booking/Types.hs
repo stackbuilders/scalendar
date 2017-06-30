@@ -1,46 +1,63 @@
-{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 module Booking.Types where
 
-import Data.Text (Text)
-import Control.Monad.Except
-import Control.Monad.Reader
-import Servant
-import Database.Persist.Sqlite
-import Database.Persist.Sql
-import Data.Time (UTCTime)
-import qualified Data.Set  as S
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Data.Aeson
+import           Data.Set                (Set)
+import           Data.Text               (Text)
+import           Data.Time               (UTCTime)
+import           Database.Persist.Sql
+import           Database.Persist.Sqlite
+import           GHC.Generics
+import           Servant
 
 
 -- | Application type
 type App a = ReaderT ConfigDB (ExceptT ServantErr IO) a
 
 newtype ConfigDB = Config {
-    path :: Text
-  } deriving Show
+  path :: Text
+} deriving Show
 
 runAction :: SqlPersistM a -> App a -- ^ run DB actions in App context
-runAction action = reader path >>= liftIO . (flip runSqlite) action
+runAction action = reader path >>= liftIO . flip runSqlite action
 
 
 -- | Booking Types
-newtype CheckIn = MkCheckIn UTCTime
-  deriving (Show)
+data CheckInOut = Check {
+    checkIn  :: UTCTime
+  , checkOut :: UTCTime
+} deriving (Show, Generic)
 
-newtype CheckOut = MkCheckOut UTCTime
-  deriving (Show)
+instance FromJSON CheckInOut
+instance ToJSON CheckInOut
 
-type Name = Text
+data Room = Room {
+    id   :: Text
+  , name :: Text
+} deriving (Show, Generic)
 
-data Room = MkRoom {
-    id   :: Integer
-  , name :: Name
-} deriving (Show)
+instance FromJSON Room
+instance ToJSON Room
 
-data Reservation = MkReservation {
-    name     :: Name
-  , checkIn  :: CheckIn
-  , checkOut :: CheckOut
-  , rooms    :: [Room] -- ^ sets or lists?
-} deriving (Show)
+data Reservation = Reservation {
+    name    :: Text
+  , check   :: CheckInOut
+  , roomIds :: Set Text
+} deriving (Show, Generic)
+
+instance FromJSON Reservation
+instance ToJSON Reservation
+
+data Report = Report {
+    total     :: Set Text
+  , reserved  :: Set Text
+  , remaining :: Set Text
+} deriving (Show, Generic)
+
+instance FromJSON Report
+instance ToJSON Report
