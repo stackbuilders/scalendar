@@ -8,10 +8,12 @@
 
 module Schemas.Booking where
 
+import           Booking.Types           (ConfigDB (..))
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Text               (Text)
 import           Data.Time               (UTCTime)
 import           Database.Persist
+import           Database.Persist.Sql    (runMigration)
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 
@@ -26,3 +28,6 @@ Reservation
   roomIds  Text
   deriving Show
 |]
+
+runBookingMigration :: ConfigDB -> IO ()
+runBookingMigration (Config path) = runSqlite path $ runMigration migrateBooking

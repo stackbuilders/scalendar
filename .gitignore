@@ -16,3 +16,5 @@ cabal.sandbox.config
 *.hp
 .stack-work/
 *~
+
+scalendar.db*
