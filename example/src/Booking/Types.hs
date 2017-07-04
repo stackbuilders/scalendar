@@ -45,13 +45,21 @@ instance FromJSON Room
 instance ToJSON Room
 
 data Reservation = Reservation {
+    id              :: Text
+  , reservationInfo :: ReservationInfo
+} deriving (Show, Generic)
+
+instance FromJSON Reservation
+instance ToJSON Reservation
+
+data ReservationInfo = ReservationInfo {
     name    :: Text
   , check   :: CheckInOut
   , roomIds :: Set Text
 } deriving (Show, Generic)
 
-instance FromJSON Reservation
-instance ToJSON Reservation
+instance FromJSON ReservationInfo
+instance ToJSON ReservationInfo
 
 data Report = Report {
     total     :: Set Text
