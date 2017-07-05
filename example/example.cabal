@@ -17,8 +17,11 @@ library
   hs-source-dirs:      src
   exposed-modules:     Booking.Types
                      , Booking.Api
+                     , Booking.Config
+                     , Schemas.Booking
   build-depends:       base >= 4.7 && < 5
                      , persistent-sqlite >= 2.5 && <= 2.6.2
+                     , persistent-template == 2.5.2
                      , persistent >= 2.5 && <= 2.7.0
                      , time
                      , text
@@ -29,8 +32,16 @@ library
                      , aeson >= 1.0.2.1 && <= 1.2.1.0
   default-language:    Haskell2010
 
-executable example-exe
+executable runExample
   hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , example
+  default-language:    Haskell2010
+
+executable runMigration
+  hs-source-dirs:      migration
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
