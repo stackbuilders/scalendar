@@ -18,9 +18,6 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 
 share [mkPersist sqlSettings, mkMigrate "migrateBooking"] [persistLowerCase|
-Room
-  name     Text
-  deriving Show
 Reservation
   name     Text
   checkIn  UTCTime

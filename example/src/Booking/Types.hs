@@ -45,7 +45,7 @@ instance FromJSON Room
 instance ToJSON Room
 
 data Reservation = Reservation {
-    id              :: Text
+    id              :: Integer
   , reservationInfo :: ReservationInfo
 } deriving (Show, Generic)
 
