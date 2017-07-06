@@ -23,4 +23,5 @@ getAllReservations = do
   pure $ (\(Entity key (Reservation name cin cout rooms))
     -> (fromIntegerTokey key, name, cin, cout, rooms)) <$> entities
 
+fromIntegerTokey :: Key Schemas.Booking.Reservation -> Integer
 fromIntegerTokey = toInteger . unSqlBackendKey . unReservationKey
