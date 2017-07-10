@@ -19,6 +19,7 @@ library
                      , Booking.Api
                      , Booking.Config
                      , Schemas.Booking
+                     , CRUD.CRUD
   build-depends:       base >= 4.7 && < 5
                      , persistent-sqlite >= 2.5 && <= 2.6.2
                      , persistent-template == 2.5.2
