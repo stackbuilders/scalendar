@@ -1,4 +1,4 @@
-module CRUD.CRUD where
+module CRUD.Operations where
 
 import           Control.Monad
 import           Data.Text               (Text)
