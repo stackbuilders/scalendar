@@ -17,7 +17,7 @@ import           Servant
 
 
 -- | Application type
-type App a = ReaderT ConfigDB (ExceptT ServantErr IO) a
+type App = ReaderT ConfigDB (ExceptT ServantErr IO)
 
 newtype ConfigDB = Config {
   path :: Text
@@ -31,7 +31,7 @@ runAction action = reader path >>= liftIO . flip runSqlite action
 data CheckInOut = Check {
     checkIn  :: UTCTime
   , checkOut :: UTCTime
-} deriving (Show, Generic)
+} deriving (Show, Generic, Ord, Eq)
 
 instance FromJSON CheckInOut
 instance ToJSON CheckInOut

@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Booking.Interpreter where
 
@@ -6,7 +8,9 @@ import           Booking.Api
 import           Booking.Types
 import           Control.Monad             (mapM)
 import           Control.Monad.Except
+import           Control.Monad.Reader
 import           CRUD.Operations
+import           Data.Proxy
 import           Data.Set
 import qualified Data.Set                  as S (fromList, toList)
 import           Data.Text
@@ -31,11 +35,10 @@ postReservation :: ReservationInfo -> App Reservation
 postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = do
   reservations <- runAction getAllReservations
   calReservs <- liftMaybe err500 $ mapM tupleToReserv reservations
-  scalendar@(SCalendar _ cal) <- liftMaybe (err500 {errBody  = "Calendar cannot be built"}) $
-    createSCalendar 2018 12 1 365 totalRooms
+  (SCalendar _ cal) <- liftMaybe err500 $ createSCalendar 2018 12 1 365 totalRooms
   calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal
   reservToCheck <- liftMaybe err500 $ tupleToReserv (0, "", cIn, cOut, ids)
-  if isReservAvailable reservToCheck scalendar
+  if isReservAvailable reservToCheck (SCalendar totalRooms calWithReservs)
     then
       runAction $ insertReservation name' (cIn, cOut) ids >>= pure . flip Reservation reservInfo
     else
@@ -49,3 +52,17 @@ postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = d
       timePeriod <- makeTimePeriod year month day numDays
       makeReservation timePeriod (S.fromList $ T.pack <$> (read . T.unpack) ids)
     ids = (T.pack . show) $ S.toList roomIds'
+
+runContext :: ConfigDB -> App :~> Handler
+runContext config = Nat $ flip runReaderT config
+
+-- | Application Server and Handlers
+
+bookingProxy :: Proxy BookingAPI
+bookingProxy = Proxy
+
+handlers :: ServerT BookingAPI App
+handlers = undefined :<|> undefined :<|> undefined :<|> postReservation :<|> undefined
+
+server :: ConfigDB -> Server BookingAPI
+server config = enter (runContext config) handlers
