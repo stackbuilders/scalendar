@@ -20,9 +20,11 @@ import           Data.Time                 ( UTCTime (..)
                                            , diffDays   )
 import           Servant
 import           Time.SCalendar.Operations ( isReservAvailable
-                                           , reserveManyPeriods' )
-import qualified Time.SCalendar.Types as SC (Reservation)
+                                           , reserveManyPeriods'
+                                           , periodReport )
+import qualified Time.SCalendar.Types as SC (Reservation, Report(..))
 import           Time.SCalendar.Types      ( SCalendar (..)
+                                           , TimePeriod
                                            , createSCalendar
                                            , makeReservation
                                            , makeTimePeriod )
@@ -50,19 +52,24 @@ calendarSpan = 365
 
 checkReservation :: Text -> CheckInOut -> App Bool
 checkReservation roomId (Check cIn cOut) = do
-  calReservs <- runAction getAllReservations >>= tuplesToCalReservs
-  (SCalendar _ cal) <- emptyCalendar
-  calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal
+  scalendar <- getSCalendarWithReservs
   reservToCheck <- liftMaybe err500 $ tupleToReserv (cIn, cOut, T.pack . show $ [roomId])
-  pure $ isReservAvailable reservToCheck (SCalendar totalRooms calWithReservs)
+  pure $ isReservAvailable reservToCheck scalendar
+
+
+getReport :: CheckInOut -> App Report
+getReport (Check cIn cOut) = do
+  scalendar <- getSCalendarWithReservs
+  period <- liftMaybe err500 $ getTimePeriodFromUTC cIn cOut
+  (SC.Report _ total reserved remainig) <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
+    periodReport period scalendar
+  pure $ Report total reserved remainig
 
 postReservation :: ReservationInfo -> App Reservation
 postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = do
-  calReservs <- runAction getAllReservations >>= tuplesToCalReservs
-  (SCalendar _ cal) <- emptyCalendar
-  calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal
+  scalendar <- getSCalendarWithReservs
   reservToCheck <- liftMaybe err500 $ tupleToReserv (cIn, cOut, ids)
-  if isReservAvailable reservToCheck (SCalendar totalRooms calWithReservs)
+  if isReservAvailable reservToCheck scalendar
     then
       runAction $ insertReservation name' (cIn, cOut) ids >>= pure . flip Reservation reservInfo
     else
@@ -78,20 +85,26 @@ liftMaybe err Nothing = lift $ throwError err
 liftMaybe _ (Just a) = pure a
 
 tupleToReserv :: (UTCTime, UTCTime, Text) -> Maybe SC.Reservation
-tupleToReserv (cIn', cOut', ids') = do
-  let (UTCTime gregDayIn _) = cIn'
-      (UTCTime gregDayOut _) = cOut'
-      numDays = fromIntegral $ diffDays gregDayOut gregDayIn
-      (year, month, day) = toGregorian gregDayIn
-  timePeriod <- makeTimePeriod year month day numDays
-  makeReservation timePeriod (S.fromList $ T.pack <$> (read . T.unpack) ids')
+tupleToReserv (cIn', cOut', ids') =
+  getTimePeriodFromUTC cIn' cOut' >>= flip makeReservation (S.fromList $ T.pack <$> (read . T.unpack) ids')
 
-emptyCalendar = liftMaybe err500
-  $ createSCalendar calendarYear calendarDay calendarMonth calendarSpan totalRooms
+getTimePeriodFromUTC :: UTCTime -> UTCTime -> Maybe TimePeriod
+getTimePeriodFromUTC (UTCTime gregDayIn _) (UTCTime gregDayOut _) =
+  let numDays = fromIntegral $ diffDays gregDayOut gregDayIn
+      (year, month, day) = toGregorian gregDayIn
+  in makeTimePeriod year month day numDays
 
 tuplesToCalReservs :: [(a, b, UTCTime, UTCTime, Text)] -> App [SC.Reservation]
 tuplesToCalReservs tupReservs = liftMaybe err500 $
   mapM (tupleToReserv . (\(_, _, a, b, c) -> (a, b, c))) tupReservs
+
+getSCalendarWithReservs :: App SCalendar
+getSCalendarWithReservs = do
+  calReservs <- runAction getAllReservations >>= tuplesToCalReservs
+  (SCalendar _ cal) <- liftMaybe err500 $
+    createSCalendar calendarYear calendarDay calendarMonth calendarSpan totalRooms
+  calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal
+  pure $ SCalendar totalRooms calWithReservs
 
 
 -- | Application Server
@@ -103,7 +116,7 @@ bookingProxy :: Proxy BookingAPI
 bookingProxy = Proxy
 
 handlers :: ServerT BookingAPI App
-handlers = undefined :<|> checkReservation :<|> undefined :<|> postReservation :<|> undefined
+handlers = undefined :<|> checkReservation :<|> getReport :<|> postReservation :<|> undefined
 
 server :: ConfigDB -> Server BookingAPI
 server config = enter (runContext config) handlers

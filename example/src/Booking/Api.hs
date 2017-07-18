@@ -17,8 +17,8 @@ type BookingAPI = "hotelbooking" :>
        "getAvailableRooms" :> ReqBody '[JSON] CheckInOut :> Get '[JSON] (Set Room)
        -- ^ 2) Return a boolean if the given RoomId is available
   :<|> "isRoomAvailable" :> Capture "roomId" RoomId :> ReqBody '[JSON] CheckInOut :> Get '[JSON] Bool
-       -- ^ 3) Return a report set based on a set of CheckInOut dates
-  :<|> "getPeriodicReport" :> ReqBody '[JSON] CheckInOut :> Get '[JSON] (Set Report)
+       -- ^ 3) Return a report of the current state of reservations in the given period of time
+  :<|> "getPeriodicReport" :> ReqBody '[JSON] CheckInOut :> Get '[JSON] Report
        -- ^ 4) Creates a reservation based on a Reservation data
   :<|> "booking" :> ReqBody '[JSON] ReservationInfo :> Post '[JSON] Reservation
        -- ^ 5) Removes a reservation based on the ReservationId
