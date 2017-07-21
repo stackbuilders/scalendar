@@ -16,6 +16,8 @@ import qualified Data.Set                  as S (fromList, toList)
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T (pack, unpack)
 import           Data.Time                 ( UTCTime (..)
+                                           , NominalDiffTime
+                                           , addUTCTime
                                            , toGregorian
                                            , diffDays   )
 import           Servant
@@ -47,19 +49,22 @@ calendarMonth = 1
 calendarSpan :: Int
 calendarSpan = 365
 
+thirthyDays :: NominalDiffTime
+thirthyDays = 2592000 -- Seconds
+
 
 -- | Handlers
 
 checkReservation :: Text -> CheckInOut -> App Bool
 checkReservation roomId (Check cIn cOut) = do
-  scalendar <- getSCalendarWithReservs
+  scalendar <- getSCalendarWithReservs (cIn, cOut)
   reservToCheck <- liftMaybe err500 $ tupleToReserv (cIn, cOut, T.pack . show $ [roomId])
   pure $ isReservAvailable reservToCheck scalendar
 
 
 getReport :: CheckInOut -> App Report
 getReport (Check cIn cOut) = do
-  scalendar <- getSCalendarWithReservs
+  scalendar <- getSCalendarWithReservs (cIn, cOut)
   period <- liftMaybe err500 $ getTimePeriodFromUTC cIn cOut
   (SC.Report _ total reserved remainig) <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
     periodReport period scalendar
@@ -67,7 +72,7 @@ getReport (Check cIn cOut) = do
 
 postReservation :: ReservationInfo -> App Reservation
 postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = do
-  scalendar <- getSCalendarWithReservs
+  scalendar <- getSCalendarWithReservs (cIn, cOut)
   reservToCheck <- liftMaybe err500 $ tupleToReserv (cIn, cOut, ids)
   if isReservAvailable reservToCheck scalendar
     then
@@ -98,9 +103,11 @@ tuplesToCalReservs :: [(a, b, UTCTime, UTCTime, Text)] -> App [SC.Reservation]
 tuplesToCalReservs tupReservs = liftMaybe err500 $
   mapM (tupleToReserv . (\(_, _, a, b, c) -> (a, b, c))) tupReservs
 
-getSCalendarWithReservs :: App SCalendar
-getSCalendarWithReservs = do
-  calReservs <- runAction getAllReservations >>= tuplesToCalReservs
+getSCalendarWithReservs :: (UTCTime, UTCTime) -> App SCalendar
+getSCalendarWithReservs (cIn, cOut) = do
+  let cIn' = (-thirthyDays) `addUTCTime` cIn
+      cOut' = thirthyDays `addUTCTime` cOut
+  calReservs <- runAction (getReservationsFromPeriod (cIn', cOut')) >>= tuplesToCalReservs
   (SCalendar _ cal) <- liftMaybe err500 $
     createSCalendar calendarYear calendarDay calendarMonth calendarSpan totalRooms
   calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal

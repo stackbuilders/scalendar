@@ -17,9 +17,12 @@ updateReservationRooms rId rooms =
   update (ReservationKey . SqlBackendKey . fromInteger $ rId)
          [ReservationRoomIds =. rooms]
 
-getAllReservations :: SqlPersistM [(Integer, Text, UTCTime, UTCTime, Text)]
-getAllReservations = do
-  entities <- selectList [] []
+getReservationsFromPeriod :: (UTCTime, UTCTime) -> SqlPersistM [(Integer, Text, UTCTime, UTCTime, Text)]
+getReservationsFromPeriod (cIn, cOut) = do
+  entities <- selectList [ ReservationCheckIn >=. cIn
+                         , ReservationCheckIn <=. cOut
+                         , ReservationCheckOut >=. cIn
+                         , ReservationCheckOut <=. cOut ] []
   pure $ (\(Entity key (Reservation name cin cout rooms))
     -> (fromIntegerTokey key, name, cin, cout, rooms)) <$> entities
 
