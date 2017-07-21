@@ -10,6 +10,7 @@ import           Control.Monad             (mapM)
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           CRUD.Operations
+import           Data.Monoid               ((<>))
 import           Data.Proxy
 import           Data.Set                  (Set)
 import qualified Data.Set                  as S (fromList, toList)
@@ -52,6 +53,10 @@ calendarSpan = 365
 thirthyDays :: NominalDiffTime
 thirthyDays = 2592000 -- Seconds
 
+intervalErrorMsg =  "Invalid time interval: Check-Out must be greater than or "
+                 <> "equal to Check-In and the interval should not span more "
+                 <> "than 29 days."
+
 
 -- | Handlers
 
@@ -72,6 +77,7 @@ getReport (Check cIn cOut) = do
 
 postReservation :: ReservationInfo -> App Reservation
 postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = do
+  liftMaybe (err400 { errBody = intervalErrorMsg }) $ isValidTimeInterval (cIn, cOut)
   scalendar <- getSCalendarWithReservs (cIn, cOut)
   reservToCheck <- liftMaybe err500 $ tupleToReserv (cIn, cOut, ids)
   if isReservAvailable reservToCheck scalendar
@@ -84,6 +90,11 @@ postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = d
 
 
 -- | Helpers
+
+isValidTimeInterval :: (UTCTime, UTCTime) -> Maybe ()
+isValidTimeInterval ((UTCTime gregDayIn _), (UTCTime gregDayOut _)) =
+  let numDays = fromIntegral $ diffDays gregDayOut gregDayIn
+  in if numDays < 30 && numDays > 0 then Just () else Nothing
 
 liftMaybe :: ServantErr -> Maybe a -> App a
 liftMaybe err Nothing = lift $ throwError err
