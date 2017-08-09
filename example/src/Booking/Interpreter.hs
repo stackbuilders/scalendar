@@ -92,7 +92,7 @@ postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = d
 -- | Helpers
 
 isValidTimeInterval :: (UTCTime, UTCTime) -> Maybe ()
-isValidTimeInterval ((UTCTime gregDayIn _), (UTCTime gregDayOut _)) =
+isValidTimeInterval (UTCTime gregDayIn _, UTCTime gregDayOut _) =
   let numDays = fromIntegral $ diffDays gregDayOut gregDayIn
   in if numDays < 30 && numDays > 0 then Just () else Nothing
 
