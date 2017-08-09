@@ -60,12 +60,22 @@ intervalErrorMsg =  "Invalid time interval: Check-Out must be greater than or "
 
 -- | Handlers
 
+-- ^ 1) Return a set of availables rooms based on the CheckInOut dates
+-- "getAvailableRooms" :> ReqBody '[JSON] CheckInOut :> Get '[JSON] (Set Room)
+
+getAllAvailableRooms :: CheckInOut -> App (Set Room)
+getAllAvailableRooms = undefined
+-- getAllAvailableRooms (Check cIn cOut) = do
+  -- scalendar <- getSCalendarWithReservs (cIn, cOut)
+  -- (SC.Report _ _ _ remainig) <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
+    -- periodReport period scalendar
+  -- pure $ Report total reserved remainig
+
 checkReservation :: Text -> CheckInOut -> App Bool
 checkReservation roomId (Check cIn cOut) = do
   scalendar <- getSCalendarWithReservs (cIn, cOut)
   reservToCheck <- liftMaybe err500 $ tupleToReserv (cIn, cOut, T.pack . show $ [roomId])
   pure $ isReservAvailable reservToCheck scalendar
-
 
 getReport :: CheckInOut -> App Report
 getReport (Check cIn cOut) = do
