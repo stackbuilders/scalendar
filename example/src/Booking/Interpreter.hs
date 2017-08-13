@@ -4,7 +4,7 @@
 
 module Booking.Interpreter where
 
-import           Booking.Api
+import           Booking.API
 import           Booking.Types
 import           Control.Monad             (mapM)
 import           Control.Monad.Except

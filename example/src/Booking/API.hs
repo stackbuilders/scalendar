@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Booking.Api where
+module Booking.API where
 
 import           Booking.Types
 import           Data.Set      (Set)

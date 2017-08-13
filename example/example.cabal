@@ -16,7 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Booking.Types
-                     , Booking.Api
+                     , Booking.API
                      , Booking.Config
                      , Booking.Interpreter
                      , Schemas.Booking
