@@ -36,14 +36,6 @@ data CheckInOut = Check {
 instance FromJSON CheckInOut
 instance ToJSON CheckInOut
 
-data Room = Room {
-    id   :: Text
-  , name :: Text
-} deriving (Show, Generic)
-
-instance FromJSON Room
-instance ToJSON Room
-
 data Reservation = Reservation {
     id              :: Integer
   , reservationInfo :: ReservationInfo

@@ -21,6 +21,7 @@ import           Data.Time                 ( UTCTime (..)
                                            , addUTCTime
                                            , toGregorian
                                            , diffDays   )
+import           Data.ByteString.Lazy           (ByteString)
 import           Servant
 import           Time.SCalendar.Operations ( isReservAvailable
                                            , reserveManyPeriods'
@@ -35,6 +36,7 @@ import           Time.SCalendar.Types      ( SCalendar (..)
 
 
 -- | Calendar constants
+
 totalRooms :: Set Text
 totalRooms = S.fromList $ (T.pack . show) <$> [100..120]
 
@@ -53,6 +55,7 @@ calendarSpan = 365
 thirthyDays :: NominalDiffTime
 thirthyDays = 2592000 -- Seconds
 
+intervalErrorMsg :: ByteString
 intervalErrorMsg =  "Invalid time interval: Check-Out must be greater than or "
                  <> "equal to Check-In and the interval should not span more "
                  <> "than 29 days."
@@ -60,16 +63,13 @@ intervalErrorMsg =  "Invalid time interval: Check-Out must be greater than or "
 
 -- | Handlers
 
--- ^ 1) Return a set of availables rooms based on the CheckInOut dates
--- "getAvailableRooms" :> ReqBody '[JSON] CheckInOut :> Get '[JSON] (Set Room)
-
-getAllAvailableRooms :: CheckInOut -> App (Set Room)
-getAllAvailableRooms = undefined
--- getAllAvailableRooms (Check cIn cOut) = do
-  -- scalendar <- getSCalendarWithReservs (cIn, cOut)
-  -- (SC.Report _ _ _ remainig) <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
-    -- periodReport period scalendar
-  -- pure $ Report total reserved remainig
+getAvailableRooms :: CheckInOut -> App (Set RoomId)
+getAvailableRooms (Check cIn cOut) = do
+  scalendar <- getSCalendarWithReservs (cIn, cOut)
+  period <- liftMaybe err500 $ getTimePeriodFromUTC cIn cOut
+  (SC.Report _ _ _ remaining') <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
+    periodReport period scalendar
+  pure remaining'
 
 checkReservation :: Text -> CheckInOut -> App Bool
 checkReservation roomId (Check cIn cOut) = do
@@ -81,9 +81,9 @@ getReport :: CheckInOut -> App Report
 getReport (Check cIn cOut) = do
   scalendar <- getSCalendarWithReservs (cIn, cOut)
   period <- liftMaybe err500 $ getTimePeriodFromUTC cIn cOut
-  (SC.Report _ total reserved remainig) <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
+  (SC.Report _ total' reserved' remaining') <- liftMaybe (err404 { errBody = "Invalid time check-in and check-out" }) $
     periodReport period scalendar
-  pure $ Report total reserved remainig
+  pure $ Report total' reserved' remaining'
 
 postReservation :: ReservationInfo -> App Reservation
 postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = do
@@ -144,7 +144,11 @@ bookingProxy :: Proxy BookingAPI
 bookingProxy = Proxy
 
 handlers :: ServerT BookingAPI App
-handlers = undefined :<|> checkReservation :<|> getReport :<|> postReservation :<|> undefined
+handlers = getAvailableRooms
+      :<|> checkReservation
+      :<|> getReport
+      :<|> postReservation
+      :<|> undefined
 
 server :: ConfigDB -> Server BookingAPI
 server config = enter (runContext config) handlers
