@@ -16,33 +16,31 @@ import           GHC.Generics
 import           Servant
 
 
--- | Application type
+--
+-- Application type --
+
 type App = ReaderT ConfigDB (ExceptT ServantErr IO)
 
 newtype ConfigDB = Config {
   path :: Text
-} deriving Show
+  } deriving Show
 
 runAction :: SqlPersistM a -> App a -- ^ run DB actions in App context
 runAction action = reader path >>= liftIO . flip runSqlite action
 
 
--- | Booking Types
+--
+-- Booking Types --
+
 data CheckInOut = Check {
     checkIn  :: UTCTime
   , checkOut :: UTCTime
 } deriving (Show, Generic, Ord, Eq)
 
-instance FromJSON CheckInOut
-instance ToJSON CheckInOut
-
 data Reservation = Reservation {
     id              :: Integer
   , reservationInfo :: ReservationInfo
 } deriving (Show, Generic)
-
-instance FromJSON Reservation
-instance ToJSON Reservation
 
 data ReservationInfo = ReservationInfo {
     name    :: Text
@@ -50,14 +48,24 @@ data ReservationInfo = ReservationInfo {
   , roomIds :: Set Text
 } deriving (Show, Generic)
 
+data Report = Report {
+    total     :: Set Text -- ^ Total rooms in our imaginary hotel.
+  , reserved  :: Set Text -- ^ Rooms which have been already reserved.
+  , remaining :: Set Text -- ^ Rooms which are still available.
+} deriving (Show, Generic)
+
+
+--
+-- FromJSON and ToJSON instances --
+
+instance FromJSON CheckInOut
+instance ToJSON CheckInOut
+
+instance FromJSON Reservation
+instance ToJSON Reservation
+
 instance FromJSON ReservationInfo
 instance ToJSON ReservationInfo
-
-data Report = Report {
-    total     :: Set Text
-  , reserved  :: Set Text
-  , remaining :: Set Text
-} deriving (Show, Generic)
 
 instance FromJSON Report
 instance ToJSON Report
