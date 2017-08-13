@@ -1,11 +1,8 @@
 module CRUD.Operations where
 
-import           Control.Monad
 import           Data.Text               (Text)
 import           Data.Time               (UTCTime)
 import           Database.Persist.Sql
-import           Database.Persist.Sqlite
-import           Database.Persist.Types
 import           Schemas.Booking
 
 insertReservation :: Text -> (UTCTime, UTCTime) -> Text -> SqlPersistM Integer
@@ -17,7 +14,8 @@ updateReservationRooms rId rooms =
   update (ReservationKey . SqlBackendKey . fromInteger $ rId)
          [ReservationRoomIds =. rooms]
 
-getReservationsFromPeriod :: (UTCTime, UTCTime) -> SqlPersistM [(Integer, Text, UTCTime, UTCTime, Text)]
+getReservationsFromPeriod :: (UTCTime, UTCTime)
+                          -> SqlPersistM [(Integer, Text, UTCTime, UTCTime, Text)]
 getReservationsFromPeriod (cIn, cOut) = do
   entities <- selectList [ ReservationCheckIn >=. cIn
                          , ReservationCheckIn <=. cOut

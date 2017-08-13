@@ -8,7 +8,6 @@ import           Data.Set      (Set)
 import           Data.Text     (Text)
 import           Servant
 
-type ReservationId = Text
 type RoomId = Text
 
 type BookingAPI = "hotelbooking" :>
@@ -21,6 +20,4 @@ type BookingAPI = "hotelbooking" :>
   :<|> "getPeriodicReport" :> ReqBody '[JSON] CheckInOut :> Get '[JSON] Report
        -- ^ 4) Creates a reservation based on a Reservation data
   :<|> "booking" :> ReqBody '[JSON] ReservationInfo :> Post '[JSON] Reservation
-       -- ^ 5) Removes a reservation based on the ReservationId
-  :<|> "cancelRooms" :> Capture "reservationId" ReservationId :> ReqBody '[JSON] (Set RoomId) :> Post '[JSON] Reservation
   )

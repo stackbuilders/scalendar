@@ -148,7 +148,6 @@ handlers = getAvailableRooms
       :<|> checkReservation
       :<|> getReport
       :<|> postReservation
-      :<|> undefined
 
 server :: ConfigDB -> Server BookingAPI
 server config = enter (runContext config) handlers
