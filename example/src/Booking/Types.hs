@@ -35,24 +35,24 @@ runAction action = reader path >>= liftIO . flip runSqlite action
 data CheckInOut = Check {
     checkIn  :: UTCTime
   , checkOut :: UTCTime
-} deriving (Show, Generic, Ord, Eq)
+  } deriving (Show, Generic, Ord, Eq)
 
 data Reservation = Reservation {
     id              :: Integer
   , reservationInfo :: ReservationInfo
-} deriving (Show, Generic)
+  } deriving (Show, Generic)
 
 data ReservationInfo = ReservationInfo {
     name    :: Text
   , check   :: CheckInOut
   , roomIds :: Set Text
-} deriving (Show, Generic)
+  } deriving (Show, Generic)
 
 data Report = Report {
     total     :: Set Text -- ^ Total rooms in our imaginary hotel.
   , reserved  :: Set Text -- ^ Rooms which have been already reserved.
   , remaining :: Set Text -- ^ Rooms which are still available.
-} deriving (Show, Generic)
+  } deriving (Show, Generic)
 
 
 --

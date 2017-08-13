@@ -5,15 +5,15 @@ import           Data.Time               (UTCTime)
 import           Database.Persist.Sql
 import           Schemas.Booking
 
-insertReservation :: Text -> (UTCTime, UTCTime) -> Text -> SqlPersistM Integer
+
+insertReservation :: Text
+                  -> (UTCTime, UTCTime)  -- ^ check-in and check-out.
+                  -> Text                -- ^ Set of rooms in text representation, e.g., "[101, 102, 103]".
+                  -> SqlPersistM Integer -- ^ Id of the created reservation in DB.
 insertReservation name (cin, cout) rooms =
   insert (Reservation name cin cout rooms) >>= pure . fromIntegerTokey
 
-updateReservationRooms :: Integer -> Text -> SqlPersistM ()
-updateReservationRooms rId rooms =
-  update (ReservationKey . SqlBackendKey . fromInteger $ rId)
-         [ReservationRoomIds =. rooms]
-
+-- | Get reservations in DB included in a given interval of time.
 getReservationsFromPeriod :: (UTCTime, UTCTime)
                           -> SqlPersistM [(Integer, Text, UTCTime, UTCTime, Text)]
 getReservationsFromPeriod (cIn, cOut) = do
@@ -24,5 +24,5 @@ getReservationsFromPeriod (cIn, cOut) = do
   pure $ (\(Entity key (Reservation name cin cout rooms))
     -> (fromIntegerTokey key, name, cin, cout, rooms)) <$> entities
 
-fromIntegerTokey :: Key Schemas.Booking.Reservation -> Integer
+fromIntegerTokey :: Key Reservation -> Integer
 fromIntegerTokey = toInteger . unSqlBackendKey . unReservationKey
