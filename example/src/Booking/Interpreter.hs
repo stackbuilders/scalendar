@@ -34,14 +34,17 @@ import           Time.SCalendar.Types      ( SCalendar (..)
                                            , makeTimePeriod )
 
 
+--
+-- Calendar constants --
 
--- | Calendar constants
-
+-- | Total rooms in our imaginary hotel represented as ids from 100 to 120.
 totalRooms :: Set Text
-totalRooms = S.fromList $ (T.pack . show) <$> [100..120]
+totalRooms = S.fromList $ (T.pack . show) <$> ([100..120] :: [Int])
 
+-- | For simplicity we are assuming that all the reservations are made in a one
+--   year Calendar starting starting from January 1th of 2017.
 calendarYear :: Integer
-calendarYear = 2018
+calendarYear = 2017
 
 calendarDay :: Int
 calendarDay = 1
@@ -51,17 +54,18 @@ calendarMonth = 1
 
 calendarSpan :: Int
 calendarSpan = 365
+-- --
 
-thirthyDays :: NominalDiffTime
-thirthyDays = 2592000 -- Seconds
+thirtyDays :: NominalDiffTime -- ^ Thirty days in seconds
+thirtyDays = 2592000
 
 intervalErrorMsg :: ByteString
 intervalErrorMsg =  "Invalid time interval: Check-Out must be greater than or "
                  <> "equal to Check-In and the interval should not span more "
                  <> "than 29 days."
 
-
--- | Handlers
+--
+-- Handlers --
 
 getAvailableRooms :: CheckInOut -> App (Set RoomId)
 getAvailableRooms (Check cIn cOut) = do
@@ -99,21 +103,30 @@ postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = d
     ids = (T.pack . show) $ S.toList roomIds'
 
 
--- | Helpers
+--
+-- Helpers --
 
+-- | Given a time interval (start, end), this functions creates an SCalendar with
+--   filled with the reservations included in the interval (start - 30 days, end + 30 days).
+--   This is appropriate for hotels since a reservation must be less than 30 days.
+getSCalendarWithReservs :: (UTCTime, UTCTime)
+                        -> App SCalendar
+getSCalendarWithReservs (cIn, cOut) = do
+  let cIn' = (-thirtyDays) `addUTCTime` cIn
+      cOut' = thirtyDays `addUTCTime` cOut
+  calReservs <- runAction (getReservationsFromPeriod (cIn', cOut')) >>= tuplesToCalReservs
+  (SCalendar _ cal) <- liftMaybe err500 $
+    createSCalendar calendarYear calendarDay calendarMonth calendarSpan totalRooms
+  calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal
+  pure $ SCalendar totalRooms calWithReservs
+
+-- | Valid hotel reservations are greater than one day but less than 30 days.
 isValidTimeInterval :: (UTCTime, UTCTime) -> Maybe ()
 isValidTimeInterval (UTCTime gregDayIn _, UTCTime gregDayOut _) =
   let numDays = fromIntegral $ diffDays gregDayOut gregDayIn
   in if numDays < 30 && numDays > 0 then Just () else Nothing
 
-liftMaybe :: ServantErr -> Maybe a -> App a
-liftMaybe err Nothing = lift $ throwError err
-liftMaybe _ (Just a) = pure a
-
-tupleToReserv :: (UTCTime, UTCTime, Text) -> Maybe SC.Reservation
-tupleToReserv (cIn', cOut', ids') =
-  getTimePeriodFromUTC cIn' cOut' >>= flip makeReservation (S.fromList $ T.pack <$> (read . T.unpack) ids')
-
+-- | Create a TimePeriod from start and end dates.
 getTimePeriodFromUTC :: UTCTime -> UTCTime -> Maybe TimePeriod
 getTimePeriodFromUTC (UTCTime gregDayIn _) (UTCTime gregDayOut _) =
   let numDays = fromIntegral $ diffDays gregDayOut gregDayIn
@@ -124,18 +137,18 @@ tuplesToCalReservs :: [(a, b, UTCTime, UTCTime, Text)] -> App [SC.Reservation]
 tuplesToCalReservs tupReservs = liftMaybe err500 $
   mapM (tupleToReserv . (\(_, _, a, b, c) -> (a, b, c))) tupReservs
 
-getSCalendarWithReservs :: (UTCTime, UTCTime) -> App SCalendar
-getSCalendarWithReservs (cIn, cOut) = do
-  let cIn' = (-thirthyDays) `addUTCTime` cIn
-      cOut' = thirthyDays `addUTCTime` cOut
-  calReservs <- runAction (getReservationsFromPeriod (cIn', cOut')) >>= tuplesToCalReservs
-  (SCalendar _ cal) <- liftMaybe err500 $
-    createSCalendar calendarYear calendarDay calendarMonth calendarSpan totalRooms
-  calWithReservs <- liftMaybe err500 $ reserveManyPeriods' calReservs cal
-  pure $ SCalendar totalRooms calWithReservs
+liftMaybe :: ServantErr -> Maybe a -> App a
+liftMaybe err Nothing = lift $ throwError err
+liftMaybe _ (Just a) = pure a
+
+tupleToReserv :: (UTCTime, UTCTime, Text) -> Maybe SC.Reservation
+tupleToReserv (cIn', cOut', ids') =
+  getTimePeriodFromUTC cIn' cOut' >>=
+    flip makeReservation (S.fromList $ T.pack <$> (read . T.unpack) ids')
 
 
--- | Application Server
+--
+-- Application Server --
 
 runContext :: ConfigDB -> App :~> Handler
 runContext config = Nat $ flip runReaderT config
