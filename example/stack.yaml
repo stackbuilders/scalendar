@@ -1,4 +1,10 @@
-resolver: lts-8.19
 packages:
 - '.'
-extra-deps: []
+- location:
+    git: git@github.com:stackbuilders/scalendar.git
+    commit: 182a5da922ee9d7eea40d7b5521629184f4ccde6
+  subdirs: []
+  extra-dep: true
+extra-deps:
+- SCalendar-0.1.0.0
+resolver: lts-8.19
