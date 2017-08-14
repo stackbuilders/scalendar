@@ -83,3 +83,15 @@ curl -iXGET localhost:3000/hotelbooking/getPeriodicReport -H "Content-Type: appl
 
 If you made the above reservation, the set of reserved rooms for that period of time should include `101`,
 `102` and `103`.
+
+
+4. Returning the rooms which are still available from February 10th to February 20th of 2017
+
+```
+curl -iXGET localhost:3000/hotelbooking/getAvailableRooms -H "Content-Type: application/json" -d '{
+      "checkIn": "2017-02-10T00:00:00Z",
+      "checkOut": "2017-02-20T00:00:00Z"
+    }'
+```
+
+If you made the above reservation, you should get all the rooms except `101`, `102` and `103`.
