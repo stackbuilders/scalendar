@@ -1,4 +1,4 @@
-# scalendar Tutorial
+# scalendar example
 
 
 # Introduction
@@ -15,7 +15,7 @@ The API exposes 4 endpoints for:
 
 - determining if a given room is available in a time period.
 
-- returning a report of the reservation history of the hotel in a time period.
+- returning an availability report of the hotel in a time period.
 
 
 # Running the example
@@ -45,7 +45,7 @@ The server will start running on port `3000`.
 You can send requests to the server with a client application like [curl](https://curl.haxx.se/). Let's
 try some example requests:
 
-1. Reserving rooms `101`,`102` and `103` from February 15th to February 20th of 2017
+1. Reserving rooms `101`, `102` and `103` from February 15th to February 20th of 2017
 
 ```
 curl -iXPOST localhost:3000/hotelbooking/booking -H "Content-Type: application/json" -d '{
@@ -57,3 +57,29 @@ curl -iXPOST localhost:3000/hotelbooking/booking -H "Content-Type: application/j
     "roomIds": ["101", "102", "103"]
    }'
 ```
+
+2. Determining if room `101` is available from February 17th to February 21th of 2017
+
+
+```
+curl -iXGET localhost:3000/hotelbooking/isRoomAvailable/101 -H "Content-Type: application/json" -d '{
+      "checkIn": "2017-02-17T00:00:00Z",
+      "checkOut": "2017-02-21T00:00:00Z"
+    }'
+```
+
+If you made the above reservation, you should get a `false` from the server meaning that that room
+is not available for that period of time.
+
+
+3. Returning an availabilty report from February 10th to February 20th of 2017
+
+```
+curl -iXGET localhost:3000/hotelbooking/getPeriodicReport -H "Content-Type: application/json" -d '{
+      "checkIn": "2017-02-10T00:00:00Z",
+      "checkOut": "2017-02-20T00:00:00Z"
+    }'
+```
+
+If you made the above reservation, the set of reserved rooms for that period of time should include `101`,
+`102` and `103`.
