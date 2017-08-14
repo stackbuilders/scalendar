@@ -106,9 +106,13 @@ postReservation reservInfo@(ReservationInfo name' (Check cIn cOut) roomIds') = d
 --
 -- Helpers --
 
--- | Given a time interval (start, end), this functions creates an SCalendar with
+-- | Given a time interval (start, end), this functions creates an SCalendar
 --   filled with the reservations included in the interval (start - 30 days, end + 30 days).
 --   This is appropriate for hotels since a reservation must be less than 30 days.
+--   Note that we do not need to fill the calendar with all reservations from DB, but if
+--   you have constraints for your reservations in your business model, say, a reservation
+--   cannot be more than N days, then you just have to fill your calendar with
+--   the reservations included in (start - N, end - N).
 getSCalendarWithReservs :: (UTCTime, UTCTime)
                         -> App SCalendar
 getSCalendarWithReservs (cIn, cOut) = do

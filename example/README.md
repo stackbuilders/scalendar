@@ -95,3 +95,20 @@ curl -iXGET localhost:3000/hotelbooking/getAvailableRooms -H "Content-Type: appl
 ```
 
 If you made the above reservation, you should get all the rooms except `101`, `102` and `103`.
+
+
+
+# Business Model Constraints and Calendars
+
+In this example implementation we have assumed that hotel reservations must be less than 30 days.
+That's why if we need to calculate the availability of a reservation from, say, February 10th to February 20th of 2017,
+we do not have to retrieve all the reservations stored in DB and fill the calendar with them, which would be inefficient.
+We just need to retrieve the reservations included in an interval of the form `(February 10th - 30 days, February 20th + 30 days)`,
+and that's all the Calendaar needs to correctly determine the availabilty of a reservation from February 10th to 20th -
+this only holds if you properly store reservations in DB taking care that if they are not less than 30 days,
+then they cannot be performed.
+
+In general, you should detect if your use case has this kind of time reservation constraint for N days - which
+is generally the case since nothing can be reserved forever -, and only allow the storage in DB of reservations less
+than N days. Then, when building a Calendar, you should only fetch reservations within a time interval of the form
+`(start-date - N, end-date + N)`.
