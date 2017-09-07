@@ -2,9 +2,9 @@ packages:
 - '.'
 - location:
     git: git@github.com:stackbuilders/scalendar.git
-    commit: 182a5da922ee9d7eea40d7b5521629184f4ccde6
+    commit: 809244c8f196afa3e8e6732286ab8a2b55cb9e7f
   subdirs: []
   extra-dep: true
 extra-deps:
-- SCalendar-0.1.0.0
+- SCalendar-1.0.0
 resolver: lts-8.19
