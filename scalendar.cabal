@@ -1,4 +1,4 @@
-name:                SCalendar
+name:                scalendar
 version:             1.0.0
 tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.1
 synopsis:            This is a library for handling calendars and resource availability
@@ -35,7 +35,7 @@ test-suite scalendar-test
                 , SCalendarTest.Constructors
   main-is:             Test.hs
   build-depends:       base
-                     , SCalendar
+                     , scalendar
                      , hspec >= 2.4.2 && < 3.0
                      , QuickCheck >= 2.9.2 && < 3.0
                      , time
