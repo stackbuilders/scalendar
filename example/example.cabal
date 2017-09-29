@@ -1,7 +1,5 @@
 name:                example
 version:             0.1.0.0
--- synopsis:
--- description:
 homepage:            https://github.com/githubuser/example#readme
 license:             BSD3
 license-file:        LICENSE
@@ -33,7 +31,7 @@ library
                      , servant-server
                      , bytestring
                      , aeson >= 1.0.2.1 && <= 1.2.1.0
-                     , SCalendar
+                     , scalendar
   default-language:    Haskell2010
 
 executable runExample

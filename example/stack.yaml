@@ -2,7 +2,7 @@ packages:
 - '.'
 - location:
     git: git@github.com:stackbuilders/scalendar.git
-    commit: 182a5da922ee9d7eea40d7b5521629184f4ccde6
+    commit: 01508a511d416af8069d351bdfa4cf83b55db401
   subdirs: []
   extra-dep: true
 extra-deps:
