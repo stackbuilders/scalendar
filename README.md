@@ -293,5 +293,9 @@ was sponsored by [Stack Builders](https://www.stackbuilders.com/)
 Thanks to [Mark Karpov](https://www.stackbuilders.com/) and [Javier Casas](https://github.com/javcasas) for
 their code reviews and suggestions.
 
-The author of the algorithm is Rayrole, Martin: "Method and device or arrangement for the management of a resource schedule." U.S. Patent Application No. 10/764,526.
-You can find the author's article about the algorithm [here](http://www.researchgate.net/publication/311582722_Method_of_Managing_Resources_in_a_Telecommunication_Network_or_a_Computing_System)
+
+# Top-Nodes Algorithm Patent information
+
+The ideas used to implement this library come from an invention by [Martin Rayrole](https://worldwide.espacenet.com/publicationDetails/biblio?locale=en_EP&II=8&FT=D&CC=US&DB=EPODOC&NR=2004204978A1&date=20041014&ND=3&KC=A1&adjacent=true#).
+
+This version of the algorithm invented by Martin Rayrole now does not have any patent protection. You can verify that by clicking on the `Abandonment` section of this [web-page](https://register.epo.org/ipfwretrieve?lng=en&apn=US.76452604.A). Thus this now belongs to the public domain!
