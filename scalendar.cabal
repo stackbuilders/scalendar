@@ -1,5 +1,5 @@
-name:                SCalendar
-version:             0.1.0.0
+name:                scalendar
+version:             1.2.0
 tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.1
 synopsis:            This is a library for handling calendars and resource availability
                      based on the "top-nodes algorithm" and set operations.
