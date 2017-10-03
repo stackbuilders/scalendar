@@ -1,8 +1,12 @@
 name:                scalendar
 version:             1.2.0
 tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.1
-synopsis:            This is a library for handling calendars and resource availability
-                     based on the "top-nodes algorithm" and set operations.
+synopsis:            A library for handling calendars and resource availability over time.
+description:         scalendar is a library based on the "top-nodes algorithm", invented by
+                     Martin Rayrole <https://en.wikipedia.org/wiki/Top-nodes_algorithm>, and
+                     set operations, which makes it easy to handle the availability of a set of
+                     resources over time.
+
 homepage:            https://github.com/stackbuilders/scalendar
 license:             MIT
 license-file:        LICENSE
