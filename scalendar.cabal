@@ -41,7 +41,7 @@ test-suite scalendar-test
                 , SCalendarTest.Constructors
   main-is:             Test.hs
   build-depends:       base
-                     , SCalendar
+                     , scalendar
                      , hspec >= 2.4.2 && < 3.0
                      , QuickCheck >= 2.9.2 && < 3.0
                      , time
