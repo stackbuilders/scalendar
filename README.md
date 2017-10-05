@@ -291,7 +291,7 @@ sort of calendar and resource availability management!!
 The base code for this library was written by [Sebastián Pulido Gómez](https://github.com/sebashack) and
 was sponsored by [Stack Builders](https://www.stackbuilders.com/)
 
-Thanks to [Mark Karpov](https://www.stackbuilders.com/) and [Javier Casas](https://github.com/javcasas) for
+Thanks to [Mark Karpov](https://github.com/mrkkrp) and [Javier Casas](https://github.com/javcasas) for
 their code reviews and suggestions.
 
 
