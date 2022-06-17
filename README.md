@@ -19,7 +19,7 @@ they do not allow duplicates, so every identifier is guaranteed to be unique.
 # Introduction
 
 
-# Data Types
+## Data Types
 
 `scalendar` is a library based on binary trees, where a Calendar is defined as follows:
 
@@ -100,7 +100,7 @@ Other important data types are:
       reserved without creating conflicts in a `TimePeriod`.
 
 
-# Creating a Calendar
+## Creating a Calendar
 
 Functions to create Calendars are located in `Time.SCalendar.Types`
 
@@ -144,7 +144,7 @@ createSCalendar :: Integer -- Year.
 createSCalendar 2017 2 1 365 (Set.fromList ["a", "b", "c", "d"])
 ```
 
-# Checking Availability
+## Checking Availability
 
 There are two functions to check availability for a reservation. The first one is
 
@@ -170,7 +170,7 @@ of strings which identifies the resources we want to reserve since we are provid
 a `Reservation` as input.
 
 
-# Adding reservations to a Calendar
+## Adding reservations to a Calendar
 
 There are two pairs of functions to add reservations to a calendar:
 
@@ -211,7 +211,7 @@ with the ones that have been already inserted, it will not be included in the `S
 
 
 
-# Removing Reservation: Cancellations
+## Removing Reservation: Cancellations
 
 There are two operations which allow us to remove reserved resources from a period of
 time:
@@ -241,7 +241,7 @@ Note that for cancellations we do not need a `SCalendar` because we don't need t
 any availability check.
 
 
-# One important thing to note
+## One important thing to note
 
 Since this calendar implementation uses `Sets` and `Set` operations, you don't have to worry
 about things like updating the total number of resource identifiers for your `SCalendar`.
@@ -249,7 +249,7 @@ You can freely remove or add identifiers to your `SCalendar` and there will be n
 conflicts while making availability checks, reservations, cancellations, and so on.
 
 
-# Reports
+## Reports
 
 It is very useful to have an operation which can summarize some information about the
 state of the calendar in a given period of time. That's why this library has
@@ -279,11 +279,10 @@ of `Report` is :
     }
   ```
 
-# Have Fun!
+## Have Fun!
 
 So if you find this library useful, have fun with it in applications which need some
 sort of calendar and resource availability management!!
-
 
 
 # Acknowledgements
@@ -295,8 +294,21 @@ Thanks to [Mark Karpov](https://github.com/mrkkrp) and [Javier Casas](https://gi
 their code reviews and suggestions.
 
 
-# Top-Nodes Algorithm Patent information
+## Top-Nodes Algorithm Patent information
 
 The ideas used to implement this library come from an invention by [Martin Rayrole](https://worldwide.espacenet.com/publicationDetails/biblio?locale=en_EP&II=8&FT=D&CC=US&DB=EPODOC&NR=2004204978A1&date=20041014&ND=3&KC=A1&adjacent=true#).
 
 This version of the algorithm invented by Martin Rayrole now does not have any patent protection. You can verify that by clicking on the `Abandonment` section of this [web-page](https://register.epo.org/ipfwretrieve?lng=en&apn=US.76452604.A). Thus this now belongs to the public domain!
+
+---
+## License
+
+MIT, see [the LICENSE file](LICENSE).
+
+## Contributing
+
+Do you want to contribute to this project? Please take a look at our [contributing guideline](CONTRIBUTING.md) to know how you can help us build it.
+
+---
+<img src="https://www.stackbuilders.com/media/images/Sb-supports.original.png" alt="Stack Builders" width="50%"></img>  
+[Check out our libraries](https://github.com/stackbuilders/) | [Join our team](https://www.stackbuilders.com/join-us/)
