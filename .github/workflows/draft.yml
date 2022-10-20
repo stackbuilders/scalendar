@@ -4,9 +4,11 @@
 name: Draft
 
 on:
-  push:
+  create:
     tags:
-      - v*
+      - 'v*'
+    branches-ignore:
+      - '*'
 
 concurrency:
   group: draft-${{ github.ref }}
