@@ -40,7 +40,7 @@ data TimePeriod =
                      -- a specific day of the calendar.
   deriving (Eq, Show)
 
--- | Check if a time-period `t1` is included in a time-period `t2`. Note that neither a
+-- | Check if a time-period @t1@ is included in a time-period @t2@. Note that neither a
 -- TimeUnit can be included in another TimeUnit nor a TimeInterval can be included
 -- in a TimeUnit. If two TimeIntervals are equal they are said to be included in
 -- one another.
@@ -99,7 +99,7 @@ data Report = Report
 -- of time covered by them. TimeUnits are only encountered in the leaves since they represent
 -- specific days, or time units, of the Calendar. The unit of time of this Calendar library is a nominal
 -- day (or 86400 seconds). Each node of a Calendar also carries additional data according to the
--- "top-nodes" algorithm: a `Q` set and a `QN` set. For more information about the meaning of these
+-- "top-nodes" algorithm: a @Q@ set and a @QN@ set. For more information about the meaning of these
 -- sets visit: <https://en.wikipedia.org/wiki/Top-nodes_algorithm>
 data Calendar =
     Unit TimePeriod (Set Text) (Set Text)

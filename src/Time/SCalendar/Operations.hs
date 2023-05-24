@@ -27,7 +27,7 @@ import qualified Data.Set as S ( null
 
 -- | Given an SCalendar of size 2^n, this function increases its size k times, that is,
 -- 2^(n+k). The new SCalendar is properly updated up to its root so that it will render
--- the same results as the previous one. For example, given an SCalendar `c` of size 2^5=32,
+-- the same results as the previous one. For example, given an SCalendar @c@ of size 2^5=32,
 -- 'augmentCalendar c 3' would produce a new SCalendar of size 2^(5+3)=256.
 augmentCalendar :: SCalendar -- ^ SCalendar to be augmented.
                 -> Int -- ^ Number of times by which the SCalendar will be augmented.
