@@ -1,5 +1,7 @@
 module Time.SCalendar.Zippers
-  ( CalendarZipper
+  ( Breadcrumbs
+  , CalendarZipper
+  , Crumb
   , goUp
   , goLeft
   , goRight
