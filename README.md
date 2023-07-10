@@ -1,7 +1,10 @@
-# scalendar: Haskell Library to deal with resource availability in a Calendar.
-
 [![Build](https://github.com/stackbuilders/scalendar/actions/workflows/build.yml/badge.svg)](https://github.com/stackbuilders/scalendar/actions/workflows/build.yml)
 [![Hackage version](https://img.shields.io/hackage/v/scalendar.svg)](https://hackage.haskell.org/package/scalendar-1.2.0)
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
+> **⚠️ Warning:** This library has been deprecated and is no longer maintained. It will not receive any further security patches, features, or bug fixes and is preserved here at GitHub for archival purposes. If you want to use it, we suggest forking the repository and auditing the codebase before use. For more information, contact us at info@stackbuilders.com.
+
+# DEPRECATED - scalendar: Haskell Library to deal with resource availability in a Calendar.
 
 This is a library for handling calendars and resource availability based on the
 `top-nodes algorithm` and set operations. That's why it is called `scalendar`: Calendars
