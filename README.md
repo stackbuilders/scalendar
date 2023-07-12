@@ -1,4 +1,3 @@
-[![Build](https://github.com/stackbuilders/scalendar/actions/workflows/build.yml/badge.svg)](https://github.com/stackbuilders/scalendar/actions/workflows/build.yml)
 [![Hackage version](https://img.shields.io/hackage/v/scalendar.svg)](https://hackage.haskell.org/package/scalendar-1.2.0)
 [![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
 
